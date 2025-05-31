@@ -72,10 +72,15 @@ func main() {
 	// Initialize repository layer
 	userRepo := repository.NewUserRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
+	taskTypeRepo := repository.NewTaskTypeRepository(db)
+	machineRepo := repository.NewMachineRepository(db)
+	userToTypeRepo := repository.NewUserToTypeRepository(db)
 
 	// Initialize service layer
-	userService := service.NewUserService(userRepo)
+	userService := service.NewUserService(userRepo, userToTypeRepo)
 	roleService := service.NewRoleService(roleRepo)
+	taskTypeService := service.NewTaskTypeService(taskTypeRepo)
+	machineService := service.NewMachineService(machineRepo)
 
 	// Set Gin mode
 	if cfg.Environment == "production" {
@@ -91,7 +96,7 @@ func main() {
 	r.Use(corsMiddleware())
 
 	// Initialize handlers with dependencies
-	h := handlers.New(userService, roleService)
+	h := handlers.NewHandler(userService, roleService, taskTypeService, machineService)
 
 	// Swagger documentation endpoint
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -120,6 +125,29 @@ func main() {
 			users.GET("/:id", h.GetUser)
 			users.PUT("/:id", h.UpdateUser)
 			users.DELETE("/:id", h.DeleteUser)
+		}
+		
+		// User task assignment route (members only)
+		api.PUT("/user/:id", h.AssignUserTaskTypes)
+		
+		// Task type routes
+		taskTypes := api.Group("/task_type")
+		{
+			taskTypes.GET("", h.GetTaskTypes)
+			taskTypes.POST("", h.CreateTaskType)
+			taskTypes.GET("/:id", h.GetTaskType)
+			taskTypes.PUT("/:id", h.UpdateTaskType)
+			taskTypes.DELETE("/:id", h.DeleteTaskType)
+		}
+		
+		// Machine routes
+		machines := api.Group("/machine")
+		{
+			machines.GET("", h.GetMachines)
+			machines.POST("", h.CreateMachine)
+			machines.GET("/:id", h.GetMachine)
+			machines.PUT("/:id", h.UpdateMachine)
+			machines.DELETE("/:id", h.DeleteMachine)
 		}
 	}
 

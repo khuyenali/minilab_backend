@@ -4,17 +4,21 @@ import (
 	"mini-lab-api/internal/service"
 )
 
-// Handler struct holds dependencies for handlers
+// Handler holds all the dependencies for handlers
 type Handler struct {
-	userService service.UserService
-	roleService service.RoleService
+	userService     service.UserService
+	roleService     service.RoleService
+	taskTypeService service.TaskTypeService
+	machineService  service.MachineService
 }
 
-// New creates a new handler instance
-func New(userService service.UserService, roleService service.RoleService) *Handler {
+// NewHandler creates a new handler instance
+func NewHandler(userService service.UserService, roleService service.RoleService, taskTypeService service.TaskTypeService, machineService service.MachineService) *Handler {
 	return &Handler{
-		userService: userService,
-		roleService: roleService,
+		userService:     userService,
+		roleService:     roleService,
+		taskTypeService: taskTypeService,
+		machineService:  machineService,
 	}
 }
 

@@ -282,4 +282,82 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 		"status":  "success",
 		"message": "User deleted successfully",
 	})
+}
+
+// AssignUserTaskTypes handles PUT /user/:id
+// @Summary Assign task types to a user
+// @Description Assign task types to a user (only for members)
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Param task_types body models.UserTaskAssignmentRequest true "Task type assignment data"
+// @Success 200 {object} ApiResponse "Task types assigned successfully"
+// @Failure 400 {object} ApiResponse "Invalid input data or user role"
+// @Failure 404 {object} ApiResponse "User not found"
+// @Failure 500 {object} ApiResponse "Internal server error"
+// @Router /api/v1/user/{id} [put]
+func (h *Handler) AssignUserTaskTypes(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.ParseInt(idParam, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid user ID",
+			"status":  "error",
+			"message": "User ID must be a number",
+		})
+		return
+	}
+
+	var req models.UserTaskAssignmentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid request data",
+			"status":  "error",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	err = h.userService.AssignTaskTypes(c.Request.Context(), int32(id), req)
+	if err != nil {
+		if err == service.ErrUserNotFound {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":   "User not found",
+				"status":  "error",
+				"message": "User with the specified ID does not exist",
+			})
+			return
+		}
+
+		if err == service.ErrInvalidUserRole {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid user role",
+				"status":  "error",
+				"message": "Only members can be assigned task types",
+			})
+			return
+		}
+
+		if err == service.ErrInvalidUserID || err == service.ErrInvalidTaskTypeAssignment {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Validation error",
+				"status":  "error",
+				"message": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to assign task types",
+			"status":  "error",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Task types assigned successfully",
+	})
 } 

@@ -8,11 +8,29 @@ import (
 	"database/sql"
 )
 
+type Machine struct {
+	ID           int32
+	MachineName  string
+	Quantity     int32
+	EstimateTime int32
+	TypeID       sql.NullInt32
+	CreatedAt    sql.NullTime
+	UpdatedAt    sql.NullTime
+}
+
 type Role struct {
 	ID        int32
 	RoleName  string
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime
+}
+
+type TaskType struct {
+	ID          int32
+	TypeName    string
+	Description sql.NullString
+	CreatedAt   sql.NullTime
+	UpdatedAt   sql.NullTime
 }
 
 type User struct {
@@ -22,4 +40,10 @@ type User struct {
 	RoleID    int32
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime
+}
+
+type UserToType struct {
+	UserID    int32
+	TypeID    int32
+	CreatedAt sql.NullTime
 }

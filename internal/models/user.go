@@ -39,6 +39,11 @@ type UpdateUserRequest struct {
 	RoleID *int32 `json:"role_id,omitempty" example:"2"`
 }
 
+// UserTaskAssignmentRequest represents the request to assign task types to a user
+type UserTaskAssignmentRequest struct {
+	TaskTypeIDs []int32 `json:"task_types" binding:"required" example:"[1,2,3]"`
+}
+
 // UserFilters represents filters for user queries
 type UserFilters struct {
 	Limit  int32  `json:"limit,omitempty"`

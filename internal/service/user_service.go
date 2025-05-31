@@ -14,17 +14,20 @@ type UserService interface {
 	CreateUser(ctx context.Context, req models.CreateUserRequest) (*models.User, error)
 	UpdateUser(ctx context.Context, id int32, req models.UpdateUserRequest) (*models.User, error)
 	DeleteUser(ctx context.Context, id int32) error
+	AssignTaskTypes(ctx context.Context, userID int32, req models.UserTaskAssignmentRequest) error
 }
 
 // userService implements UserService
 type userService struct {
-	userRepo repository.UserRepository
+	userRepo       repository.UserRepository
+	userToTypeRepo repository.UserToTypeRepository
 }
 
 // NewUserService creates a new user service
-func NewUserService(userRepo repository.UserRepository) UserService {
+func NewUserService(userRepo repository.UserRepository, userToTypeRepo repository.UserToTypeRepository) UserService {
 	return &userService{
-		userRepo: userRepo,
+		userRepo:       userRepo,
+		userToTypeRepo: userToTypeRepo,
 	}
 }
 
@@ -182,6 +185,40 @@ func (s *userService) validateUpdateUserRequest(req models.UpdateUserRequest) er
 		if !strings.Contains(req.Email, "@") {
 			return ErrInvalidUserEmail
 		}
+	}
+	
+	return nil
+}
+
+// AssignTaskTypes assigns task types to a user (only for members)
+func (s *userService) AssignTaskTypes(ctx context.Context, userID int32, req models.UserTaskAssignmentRequest) error {
+	if userID <= 0 {
+		return ErrInvalidUserID
+	}
+	
+	// Get user to check role
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		if err == repository.ErrUserNotFound {
+			return ErrUserNotFound
+		}
+		return err
+	}
+	
+	// Only members (role_id = 3) can be assigned task types
+	if user.RoleID != 3 {
+		return ErrInvalidUserRole
+	}
+	
+	// Validate task type IDs
+	if len(req.TaskTypeIDs) == 0 {
+		return ErrInvalidTaskTypeAssignment
+	}
+	
+	// Assign task types
+	err = s.userToTypeRepo.AssignTaskTypes(ctx, userID, req.TaskTypeIDs)
+	if err != nil {
+		return err
 	}
 	
 	return nil

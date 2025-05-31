@@ -13,6 +13,29 @@ definitions:
         example: success
         type: string
     type: object
+  models.CreateMachineRequest:
+    properties:
+      estimate_time:
+        example: 120
+        minimum: 1
+        type: integer
+      name:
+        example: 3D Printer Model X
+        type: string
+      quantity:
+        example: 2
+        minimum: 1
+        type: integer
+      task_type:
+        example: 1
+        type: integer
+    required:
+    - estimate_time
+    - name
+    - quantity
+    type: object
+  models.CreateTaskTypeRequest:
+    type: object
   models.CreateUserRequest:
     properties:
       email:
@@ -28,6 +51,31 @@ definitions:
     - email
     - name
     type: object
+  models.Machine:
+    properties:
+      created_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      estimate_time:
+        description: in minutes
+        example: 120
+        type: integer
+      id:
+        example: 1
+        type: integer
+      name:
+        example: 3D Printer Model X
+        type: string
+      quantity:
+        example: 2
+        type: integer
+      task_type:
+        example: 3D Printing
+        type: string
+      updated_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+    type: object
   models.Role:
     properties:
       created_at:
@@ -42,6 +90,44 @@ definitions:
       updated_at:
         example: "2023-01-01T00:00:00Z"
         type: string
+    type: object
+  models.TaskType:
+    properties:
+      created_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      description:
+        example: 3D printing and modeling tasks
+        type: string
+      id:
+        example: 1
+        type: integer
+      machines:
+        items:
+          $ref: '#/definitions/models.Machine'
+        type: array
+      name:
+        example: 3D Printing
+        type: string
+      updated_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+    type: object
+  models.UpdateMachineRequest:
+    properties:
+      estimate_time:
+        example: 90
+        minimum: 1
+        type: integer
+      name:
+        example: 3D Printer Model Y
+        type: string
+      quantity:
+        example: 3
+        minimum: 1
+        type: integer
+    type: object
+  models.UpdateTaskTypeRequest:
     type: object
   models.UpdateUserRequest:
     properties:
@@ -76,6 +162,8 @@ definitions:
         example: "2023-01-01T00:00:00Z"
         type: string
     type: object
+  models.UserTaskAssignmentRequest:
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -90,6 +178,173 @@ info:
   title: Mini Lab API
   version: "1.0"
 paths:
+  /api/v1/machine:
+    get:
+      description: Get a list of all machines
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of machines
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Machine'
+                  type: array
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Get all machines
+      tags:
+      - machines
+    post:
+      consumes:
+      - application/json
+      description: Create a new machine with optional task type assignment
+      parameters:
+      - description: Machine creation data
+        in: body
+        name: machine
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateMachineRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Machine created successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Machine'
+              type: object
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Create a new machine
+      tags:
+      - machines
+  /api/v1/machine/{id}:
+    delete:
+      description: Delete a machine by ID
+      parameters:
+      - description: Machine ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Machine deleted successfully
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "400":
+          description: Invalid machine ID
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "404":
+          description: Machine not found
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Delete a machine
+      tags:
+      - machines
+    get:
+      description: Get a single machine by its ID
+      parameters:
+      - description: Machine ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Machine details
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Machine'
+              type: object
+        "400":
+          description: Invalid machine ID
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "404":
+          description: Machine not found
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Get machine by ID
+      tags:
+      - machines
+    put:
+      consumes:
+      - application/json
+      description: Update an existing machine by ID
+      parameters:
+      - description: Machine ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Machine update data
+        in: body
+        name: machine
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateMachineRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Machine updated successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Machine'
+              type: object
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "404":
+          description: Machine not found
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Update a machine
+      tags:
+      - machines
   /api/v1/ping:
     get:
       description: Ping endpoint to test API connectivity
@@ -164,6 +419,212 @@ paths:
       summary: Get role by ID
       tags:
       - roles
+  /api/v1/task_type:
+    get:
+      description: Get a list of all task types
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of task types
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.TaskType'
+                  type: array
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Get all task types
+      tags:
+      - task-types
+    post:
+      consumes:
+      - application/json
+      description: Create a new task type with optional machine assignments
+      parameters:
+      - description: Task type creation data
+        in: body
+        name: task_type
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateTaskTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Task type created successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.TaskType'
+              type: object
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Create a new task type
+      tags:
+      - task-types
+  /api/v1/task_type/{id}:
+    delete:
+      description: Delete a task type by ID
+      parameters:
+      - description: Task Type ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task type deleted successfully
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "400":
+          description: Invalid task type ID
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "404":
+          description: Task type not found
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Delete a task type
+      tags:
+      - task-types
+    get:
+      description: Get a single task type by its ID with associated machines
+      parameters:
+      - description: Task Type ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task type details with machines
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.TaskType'
+              type: object
+        "400":
+          description: Invalid task type ID
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "404":
+          description: Task type not found
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Get task type by ID
+      tags:
+      - task-types
+    put:
+      consumes:
+      - application/json
+      description: Update an existing task type by ID
+      parameters:
+      - description: Task Type ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Task type update data
+        in: body
+        name: task_type
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateTaskTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task type updated successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.TaskType'
+              type: object
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "404":
+          description: Task type not found
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Update a task type
+      tags:
+      - task-types
+  /api/v1/user/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Assign task types to a user (only for members)
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Task type assignment data
+        in: body
+        name: task_types
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserTaskAssignmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task types assigned successfully
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "400":
+          description: Invalid input data or user role
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Assign task types to a user
+      tags:
+      - users
   /api/v1/users:
     get:
       description: Get a list of all users
