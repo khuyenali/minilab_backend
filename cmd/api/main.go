@@ -71,9 +71,11 @@ func main() {
 
 	// Initialize repository layer
 	userRepo := repository.NewUserRepository(db)
+	roleRepo := repository.NewRoleRepository(db)
 
 	// Initialize service layer
 	userService := service.NewUserService(userRepo)
+	roleService := service.NewRoleService(roleRepo)
 
 	// Set Gin mode
 	if cfg.Environment == "production" {
@@ -89,7 +91,7 @@ func main() {
 	r.Use(corsMiddleware())
 
 	// Initialize handlers with dependencies
-	h := handlers.New(userService)
+	h := handlers.New(userService, roleService)
 
 	// Swagger documentation endpoint
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -102,6 +104,13 @@ func main() {
 	{
 		// Example endpoints - you can expand these
 		api.GET("/ping", h.Ping)
+		
+		// Role routes
+		roles := api.Group("/roles")
+		{
+			roles.GET("", h.GetRoles)
+			roles.GET("/:id", h.GetRole)
+		}
 		
 		// User routes
 		users := api.Group("/users")

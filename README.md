@@ -150,6 +150,10 @@ This will install all tools, generate code, and prepare the project for developm
 ### Ping
 - `GET /api/v1/ping` - Simple connectivity test
 
+### Roles (Read-only)
+- `GET /api/v1/roles` - Get all available roles
+- `GET /api/v1/roles/:id` - Get role by ID
+
 ### Users (Database-backed)
 - `GET /api/v1/users` - Get all users
 - `GET /api/v1/users/:id` - Get user by ID
@@ -159,11 +163,28 @@ This will install all tools, generate code, and prepare the project for developm
 
 ### Example Requests
 
+Get all roles:
+```bash
+curl http://localhost:8080/api/v1/roles
+```
+
+Get specific role:
+```bash
+curl http://localhost:8080/api/v1/roles/1
+```
+
 Create a user:
 ```bash
 curl -X POST http://localhost:8080/api/v1/users \
   -H "Content-Type: application/json" \
   -d '{"name":"John Doe","email":"john@example.com"}'
+```
+
+Create a user with admin role:
+```bash
+curl -X POST http://localhost:8080/api/v1/users \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Admin User","email":"admin@example.com","role_id":1}'
 ```
 
 Get all users:
@@ -176,6 +197,13 @@ Update a user:
 curl -X PUT http://localhost:8080/api/v1/users/1 \
   -H "Content-Type: application/json" \
   -d '{"name":"John Updated","email":"john.updated@example.com"}'
+```
+
+Update user role:
+```bash
+curl -X PUT http://localhost:8080/api/v1/users/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name":"John Admin","email":"john@example.com","role_id":1}'
 ```
 
 ## Development
@@ -332,6 +360,26 @@ cat .air.toml
 ```
 
 ### Database Operations
+
+**Current Database Schema:**
+
+The database consists of 2 main tables with the following migration order:
+
+1. **Migration 000001**: `roles` table
+   - Creates the roles table with predefined roles (admin, leader, member)
+   - Establishes the foundation for role-based access
+
+2. **Migration 000002**: `users` table  
+   - Creates the users table with role_id foreign key
+   - Includes proper indexes for performance
+   - Default role is "member" (role_id: 3)
+
+**Database Relationships:**
+```
+roles (1) ←→ (many) users
+- users.role_id → roles.id
+- Default role: member (id: 3)
+```
 
 **Create a new migration:**
 ```bash
