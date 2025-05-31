@@ -11,4 +11,7 @@ var (
 	ErrInvalidUserEmail  = errors.New("invalid user email")
 	ErrUserNameTooLong   = errors.New("user name is too long")
 	ErrUserEmailTooLong  = errors.New("user email is too long")
+	ErrRoleNotFound      = errors.New("role not found")
+	ErrInvalidRoleID     = errors.New("invalid role ID")
+	ErrInvalidRoleName   = errors.New("invalid role name")
 ) 

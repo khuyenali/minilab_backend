@@ -7,12 +7,14 @@ import (
 // Handler struct holds dependencies for handlers
 type Handler struct {
 	userService service.UserService
+	roleService service.RoleService
 }
 
 // New creates a new handler instance
-func New(userService service.UserService) *Handler {
+func New(userService service.UserService, roleService service.RoleService) *Handler {
 	return &Handler{
 		userService: userService,
+		roleService: roleService,
 	}
 }
 

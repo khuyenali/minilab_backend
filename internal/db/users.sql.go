@@ -7,26 +7,29 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (name, email) 
-VALUES ($1, $2) 
-RETURNING id, name, email, created_at, updated_at
+INSERT INTO users (name, email, role_id) 
+VALUES ($1, $2, $3) 
+RETURNING id, name, email, role_id, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	Name  string
-	Email string
+	Name   string
+	Email  string
+	RoleID int32
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser, arg.Name, arg.Email)
+	row := q.db.QueryRowContext(ctx, createUser, arg.Name, arg.Email, arg.RoleID)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Email,
+		&i.RoleID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -44,18 +47,31 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, name, email, created_at, updated_at 
-FROM users 
-WHERE id = $1 LIMIT 1
+SELECT u.id, u.name, u.email, u.role_id, r.role_name, u.created_at, u.updated_at 
+FROM users u
+JOIN roles r ON u.role_id = r.id
+WHERE u.id = $1 LIMIT 1
 `
 
-func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
+type GetUserRow struct {
+	ID        int32
+	Name      string
+	Email     string
+	RoleID    int32
+	RoleName  string
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+}
+
+func (q *Queries) GetUser(ctx context.Context, id int32) (GetUserRow, error) {
 	row := q.db.QueryRowContext(ctx, getUser, id)
-	var i User
+	var i GetUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Email,
+		&i.RoleID,
+		&i.RoleName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -63,43 +79,118 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, name, email, created_at, updated_at 
-FROM users 
-WHERE email = $1 LIMIT 1
+SELECT u.id, u.name, u.email, u.role_id, r.role_name, u.created_at, u.updated_at 
+FROM users u
+JOIN roles r ON u.role_id = r.id
+WHERE u.email = $1 LIMIT 1
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+type GetUserByEmailRow struct {
+	ID        int32
+	Name      string
+	Email     string
+	RoleID    int32
+	RoleName  string
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
-	var i User
+	var i GetUserByEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Email,
+		&i.RoleID,
+		&i.RoleName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const listUsers = `-- name: ListUsers :many
-SELECT id, name, email, created_at, updated_at 
-FROM users 
-ORDER BY created_at DESC
+const getUsersByRole = `-- name: GetUsersByRole :many
+SELECT u.id, u.name, u.email, u.role_id, r.role_name, u.created_at, u.updated_at 
+FROM users u
+JOIN roles r ON u.role_id = r.id
+WHERE r.role_name = $1
+ORDER BY u.created_at DESC
 `
 
-func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
+type GetUsersByRoleRow struct {
+	ID        int32
+	Name      string
+	Email     string
+	RoleID    int32
+	RoleName  string
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+}
+
+func (q *Queries) GetUsersByRole(ctx context.Context, roleName string) ([]GetUsersByRoleRow, error) {
+	rows, err := q.db.QueryContext(ctx, getUsersByRole, roleName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUsersByRoleRow
+	for rows.Next() {
+		var i GetUsersByRoleRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Email,
+			&i.RoleID,
+			&i.RoleName,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsers = `-- name: ListUsers :many
+SELECT u.id, u.name, u.email, u.role_id, r.role_name, u.created_at, u.updated_at 
+FROM users u
+JOIN roles r ON u.role_id = r.id
+ORDER BY u.created_at DESC
+`
+
+type ListUsersRow struct {
+	ID        int32
+	Name      string
+	Email     string
+	RoleID    int32
+	RoleName  string
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+}
+
+func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 	rows, err := q.db.QueryContext(ctx, listUsers)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []User
+	var items []ListUsersRow
 	for rows.Next() {
-		var i User
+		var i ListUsersRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.Email,
+			&i.RoleID,
+			&i.RoleName,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -118,24 +209,31 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 
 const updateUser = `-- name: UpdateUser :one
 UPDATE users 
-SET name = $2, email = $3, updated_at = NOW() 
+SET name = $2, email = $3, role_id = COALESCE($4, role_id), updated_at = NOW() 
 WHERE id = $1 
-RETURNING id, name, email, created_at, updated_at
+RETURNING id, name, email, role_id, created_at, updated_at
 `
 
 type UpdateUserParams struct {
-	ID    int32
-	Name  string
-	Email string
+	ID     int32
+	Name   string
+	Email  string
+	RoleID int32
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, updateUser, arg.ID, arg.Name, arg.Email)
+	row := q.db.QueryRowContext(ctx, updateUser,
+		arg.ID,
+		arg.Name,
+		arg.Email,
+		arg.RoleID,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Email,
+		&i.RoleID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

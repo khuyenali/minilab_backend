@@ -21,9 +21,27 @@ definitions:
       name:
         example: John Doe
         type: string
+      role_id:
+        example: 3
+        type: integer
     required:
     - email
     - name
+    type: object
+  models.Role:
+    properties:
+      created_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 1
+        type: integer
+      role_name:
+        example: admin
+        type: string
+      updated_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
     type: object
   models.UpdateUserRequest:
     properties:
@@ -33,6 +51,9 @@ definitions:
       name:
         example: John Doe Updated
         type: string
+      role_id:
+        example: 2
+        type: integer
     type: object
   models.User:
     properties:
@@ -47,6 +68,9 @@ definitions:
         type: integer
       name:
         example: John Doe
+        type: string
+      role:
+        example: member
         type: string
       updated_at:
         example: "2023-01-01T00:00:00Z"
@@ -80,6 +104,66 @@ paths:
       summary: Ping
       tags:
       - ping
+  /api/v1/roles:
+    get:
+      description: Get a list of all available roles
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of roles
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Role'
+                  type: array
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Get all roles
+      tags:
+      - roles
+  /api/v1/roles/{id}:
+    get:
+      description: Get a single role by its ID
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role details
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Role'
+              type: object
+        "400":
+          description: Invalid role ID
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "404":
+          description: Role not found
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Get role by ID
+      tags:
+      - roles
   /api/v1/users:
     get:
       description: Get a list of all users

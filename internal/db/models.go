@@ -8,10 +8,18 @@ import (
 	"database/sql"
 )
 
+type Role struct {
+	ID        int32
+	RoleName  string
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+}
+
 type User struct {
 	ID        int32
 	Name      string
 	Email     string
+	RoleID    int32
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime
 }

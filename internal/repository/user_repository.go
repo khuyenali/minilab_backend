@@ -12,6 +12,7 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id int32) (*models.User, error)
 	GetByEmail(ctx context.Context, email string) (*models.User, error)
 	List(ctx context.Context, filters models.UserFilters) ([]*models.User, error)
+	GetByRole(ctx context.Context, roleName string) ([]*models.User, error)
 	Create(ctx context.Context, req models.CreateUserRequest) (*models.User, error)
 	Update(ctx context.Context, id int32, req models.UpdateUserRequest) (*models.User, error)
 	Delete(ctx context.Context, id int32) error
@@ -33,7 +34,7 @@ func NewUserRepository(database *sql.DB) UserRepository {
 
 // GetByID retrieves a user by ID
 func (r *userRepository) GetByID(ctx context.Context, id int32) (*models.User, error) {
-	dbUser, err := r.queries.GetUser(ctx, id)
+	row, err := r.queries.GetUser(ctx, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrUserNotFound
@@ -41,12 +42,12 @@ func (r *userRepository) GetByID(ctx context.Context, id int32) (*models.User, e
 		return nil, err
 	}
 	
-	return models.FromDBUser(dbUser), nil
+	return models.FromGetUserRow(row), nil
 }
 
 // GetByEmail retrieves a user by email
 func (r *userRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
-	dbUser, err := r.queries.GetUserByEmail(ctx, email)
+	row, err := r.queries.GetUserByEmail(ctx, email)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrUserNotFound
@@ -54,19 +55,32 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*models.
 		return nil, err
 	}
 	
-	return models.FromDBUser(dbUser), nil
+	return models.FromGetUserByEmailRow(row), nil
 }
 
 // List retrieves users with optional filtering
 func (r *userRepository) List(ctx context.Context, filters models.UserFilters) ([]*models.User, error) {
-	// For now, we'll just get all users since we don't have complex filtering in our SQL
-	// In a real app, you'd add more sophisticated query methods
-	dbUsers, err := r.queries.ListUsers(ctx)
+	// Check if filtering by role
+	if filters.Role != "" {
+		return r.GetByRole(ctx, filters.Role)
+	}
+	
+	rows, err := r.queries.ListUsers(ctx)
 	if err != nil {
 		return nil, err
 	}
 	
-	return models.FromDBUsers(dbUsers), nil
+	return models.FromListUsersRows(rows), nil
+}
+
+// GetByRole retrieves users by role name
+func (r *userRepository) GetByRole(ctx context.Context, roleName string) ([]*models.User, error) {
+	rows, err := r.queries.GetUsersByRole(ctx, roleName)
+	if err != nil {
+		return nil, err
+	}
+	
+	return models.FromGetUsersByRoleRows(rows), nil
 }
 
 // Create creates a new user
@@ -80,15 +94,23 @@ func (r *userRepository) Create(ctx context.Context, req models.CreateUserReques
 		return nil, err
 	}
 	
+	// Determine role_id (default to member role if not specified)
+	roleID := int32(3) // Default to member role
+	if req.RoleID != nil {
+		roleID = *req.RoleID
+	}
+	
 	dbUser, err := r.queries.CreateUser(ctx, db.CreateUserParams{
-		Name:  req.Name,
-		Email: req.Email,
+		Name:   req.Name,
+		Email:  req.Email,
+		RoleID: roleID,
 	})
 	if err != nil {
 		return nil, err
 	}
 	
-	return models.FromDBUser(dbUser), nil
+	// Get the full user with role information
+	return r.GetByID(ctx, dbUser.ID)
 }
 
 // Update updates an existing user
@@ -101,9 +123,10 @@ func (r *userRepository) Update(ctx context.Context, id int32, req models.Update
 	
 	// Prepare update params with existing values as defaults
 	updateParams := db.UpdateUserParams{
-		ID:    id,
-		Name:  existingUser.Name,
-		Email: existingUser.Email,
+		ID:     id,
+		Name:   existingUser.Name,
+		Email:  existingUser.Email,
+		RoleID: existingUser.RoleID,
 	}
 	
 	// Update only provided fields
@@ -123,13 +146,17 @@ func (r *userRepository) Update(ctx context.Context, id int32, req models.Update
 		}
 		updateParams.Email = req.Email
 	}
+	if req.RoleID != nil {
+		updateParams.RoleID = *req.RoleID
+	}
 	
 	dbUser, err := r.queries.UpdateUser(ctx, updateParams)
 	if err != nil {
 		return nil, err
 	}
 	
-	return models.FromDBUser(dbUser), nil
+	// Get the full user with role information
+	return r.GetByID(ctx, dbUser.ID)
 }
 
 // Delete deletes a user by ID
