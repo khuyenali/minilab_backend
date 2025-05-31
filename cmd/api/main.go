@@ -1,0 +1,158 @@
+// Package main Mini Lab API
+//
+// A simple RESTful API server built with Go, Gin, sqlc, and golang-migrate.
+//
+// Terms Of Service: http://swagger.io/terms/
+//
+// Schemes: http, https
+// Host: localhost:8080
+// BasePath: /
+// Version: 1.0.0
+// License: MIT http://opensource.org/licenses/MIT
+// Contact: Mini Lab API <support@minilab.com>
+//
+// Consumes:
+// - application/json
+//
+// Produces:
+// - application/json
+//
+// swagger:meta
+package main
+
+import (
+	"log"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
+	"github.com/swaggo/files"
+	"github.com/swaggo/gin-swagger"
+	"mini-lab-api/internal/config"
+	"mini-lab-api/internal/handlers"
+	"mini-lab-api/internal/repository"
+	"mini-lab-api/internal/service"
+	
+	_ "mini-lab-api/docs" // Import generated docs
+)
+
+// @title Mini Lab API
+// @version 1.0
+// @description A simple RESTful API server built with Go, Gin, sqlc, and golang-migrate.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.minilab.com/support
+// @contact.email support@minilab.com
+
+// @license.name MIT
+// @license.url http://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /
+// @schemes http https
+func main() {
+	// Load environment variables
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found")
+	}
+
+	// Initialize configuration
+	cfg := config.New()
+
+	// Initialize database connection
+	db, err := config.NewDatabase(cfg)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer db.Close()
+
+	log.Println("Successfully connected to database")
+
+	// Initialize repository layer
+	userRepo := repository.NewUserRepository(db)
+
+	// Initialize service layer
+	userService := service.NewUserService(userRepo)
+
+	// Set Gin mode
+	if cfg.Environment == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	// Initialize Gin router
+	r := gin.Default()
+
+	// Add middleware
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
+	r.Use(corsMiddleware())
+
+	// Initialize handlers with dependencies
+	h := handlers.New(userService)
+
+	// Swagger documentation endpoint
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Health check endpoint
+	r.GET("/health", healthCheck)
+
+	// API routes
+	api := r.Group("/api/v1")
+	{
+		// Example endpoints - you can expand these
+		api.GET("/ping", h.Ping)
+		
+		// User routes
+		users := api.Group("/users")
+		{
+			users.GET("", h.GetUsers)
+			users.POST("", h.CreateUser)
+			users.GET("/:id", h.GetUser)
+			users.PUT("/:id", h.UpdateUser)
+			users.DELETE("/:id", h.DeleteUser)
+		}
+	}
+
+	// Start server
+	port := cfg.Port
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Printf("Starting Mini Lab API server on port %s", port)
+	log.Printf("Swagger documentation available at: http://localhost:%s/swagger/index.html", port)
+	log.Fatal(r.Run(":" + port))
+}
+
+// healthCheck handles the health check endpoint
+// @Summary Health Check
+// @Description Check if the API is running
+// @Tags health
+// @Produce json
+// @Success 200 {object} map[string]interface{} "API is running"
+// @Router /health [get]
+func healthCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "ok",
+		"message": "Mini Lab API is running",
+		"version": "1.0.0",
+	})
+}
+
+// corsMiddleware handles CORS
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Credentials", "true")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Header("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
+} 

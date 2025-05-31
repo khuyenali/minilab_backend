@@ -1,0 +1,188 @@
+package service
+
+import (
+	"context"
+	"strings"
+	"mini-lab-api/internal/models"
+	"mini-lab-api/internal/repository"
+)
+
+// UserService defines the interface for user business operations
+type UserService interface {
+	GetUser(ctx context.Context, id int32) (*models.User, error)
+	GetUsers(ctx context.Context, filters models.UserFilters) ([]*models.User, error)
+	CreateUser(ctx context.Context, req models.CreateUserRequest) (*models.User, error)
+	UpdateUser(ctx context.Context, id int32, req models.UpdateUserRequest) (*models.User, error)
+	DeleteUser(ctx context.Context, id int32) error
+}
+
+// userService implements UserService
+type userService struct {
+	userRepo repository.UserRepository
+}
+
+// NewUserService creates a new user service
+func NewUserService(userRepo repository.UserRepository) UserService {
+	return &userService{
+		userRepo: userRepo,
+	}
+}
+
+// GetUser retrieves a user by ID
+func (s *userService) GetUser(ctx context.Context, id int32) (*models.User, error) {
+	if id <= 0 {
+		return nil, ErrInvalidUserID
+	}
+	
+	user, err := s.userRepo.GetByID(ctx, id)
+	if err != nil {
+		if err == repository.ErrUserNotFound {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+	
+	return user, nil
+}
+
+// GetUsers retrieves all users with optional filtering
+func (s *userService) GetUsers(ctx context.Context, filters models.UserFilters) ([]*models.User, error) {
+	// Apply business rules for filtering
+	if filters.Limit <= 0 {
+		filters.Limit = 50 // Default limit
+	}
+	if filters.Limit > 100 {
+		filters.Limit = 100 // Max limit
+	}
+	
+	users, err := s.userRepo.List(ctx, filters)
+	if err != nil {
+		return nil, err
+	}
+	
+	return users, nil
+}
+
+// CreateUser creates a new user with business validation
+func (s *userService) CreateUser(ctx context.Context, req models.CreateUserRequest) (*models.User, error) {
+	// Business validation
+	if err := s.validateCreateUserRequest(req); err != nil {
+		return nil, err
+	}
+	
+	// Clean and normalize data
+	req.Name = strings.TrimSpace(req.Name)
+	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+	
+	user, err := s.userRepo.Create(ctx, req)
+	if err != nil {
+		if err == repository.ErrUserEmailExists {
+			return nil, ErrUserEmailExists
+		}
+		return nil, err
+	}
+	
+	return user, nil
+}
+
+// UpdateUser updates an existing user with business validation
+func (s *userService) UpdateUser(ctx context.Context, id int32, req models.UpdateUserRequest) (*models.User, error) {
+	if id <= 0 {
+		return nil, ErrInvalidUserID
+	}
+	
+	// Business validation
+	if err := s.validateUpdateUserRequest(req); err != nil {
+		return nil, err
+	}
+	
+	// Clean and normalize data
+	if req.Name != "" {
+		req.Name = strings.TrimSpace(req.Name)
+	}
+	if req.Email != "" {
+		req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+	}
+	
+	user, err := s.userRepo.Update(ctx, id, req)
+	if err != nil {
+		if err == repository.ErrUserNotFound {
+			return nil, ErrUserNotFound
+		}
+		if err == repository.ErrUserEmailExists {
+			return nil, ErrUserEmailExists
+		}
+		return nil, err
+	}
+	
+	return user, nil
+}
+
+// DeleteUser deletes a user by ID
+func (s *userService) DeleteUser(ctx context.Context, id int32) error {
+	if id <= 0 {
+		return ErrInvalidUserID
+	}
+	
+	err := s.userRepo.Delete(ctx, id)
+	if err != nil {
+		if err == repository.ErrUserNotFound {
+			return ErrUserNotFound
+		}
+		return err
+	}
+	
+	return nil
+}
+
+// validateCreateUserRequest validates create user request
+func (s *userService) validateCreateUserRequest(req models.CreateUserRequest) error {
+	if strings.TrimSpace(req.Name) == "" {
+		return ErrInvalidUserName
+	}
+	
+	if len(req.Name) > 255 {
+		return ErrUserNameTooLong
+	}
+	
+	if strings.TrimSpace(req.Email) == "" {
+		return ErrInvalidUserEmail
+	}
+	
+	if len(req.Email) > 255 {
+		return ErrUserEmailTooLong
+	}
+	
+	// Basic email validation (Gin's email validator is more comprehensive)
+	if !strings.Contains(req.Email, "@") {
+		return ErrInvalidUserEmail
+	}
+	
+	return nil
+}
+
+// validateUpdateUserRequest validates update user request
+func (s *userService) validateUpdateUserRequest(req models.UpdateUserRequest) error {
+	if req.Name != "" {
+		if strings.TrimSpace(req.Name) == "" {
+			return ErrInvalidUserName
+		}
+		if len(req.Name) > 255 {
+			return ErrUserNameTooLong
+		}
+	}
+	
+	if req.Email != "" {
+		if strings.TrimSpace(req.Email) == "" {
+			return ErrInvalidUserEmail
+		}
+		if len(req.Email) > 255 {
+			return ErrUserEmailTooLong
+		}
+		if !strings.Contains(req.Email, "@") {
+			return ErrInvalidUserEmail
+		}
+	}
+	
+	return nil
+} 
