@@ -746,7 +746,7 @@ const docTemplate = `{
         },
         "/api/v1/users": {
             "get": {
-                "description": "Get a list of all users",
+                "description": "Get a list of all users with optional role filtering",
                 "produces": [
                     "application/json"
                 ],
@@ -754,6 +754,29 @@ const docTemplate = `{
                     "users"
                 ],
                 "summary": "Get all users",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "example": 3,
+                        "description": "Filter by role ID",
+                        "name": "role_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "example": 50,
+                        "description": "Limit the number of results",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "example": 0,
+                        "description": "Offset for pagination",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "List of users",
@@ -774,6 +797,12 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameters",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
                         }
                     },
                     "500": {
@@ -1089,14 +1118,37 @@ const docTemplate = `{
                     "minimum": 1,
                     "example": 2
                 },
-                "task_type": {
+                "task_type_id": {
                     "type": "integer",
                     "example": 1
                 }
             }
         },
         "models.CreateTaskTypeRequest": {
-            "type": "object"
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "3D printing and modeling tasks"
+                },
+                "machines": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "example": [
+                        1,
+                        2
+                    ]
+                },
+                "name": {
+                    "type": "string",
+                    "example": "3D Printing"
+                }
+            }
         },
         "models.CreateUserRequest": {
             "type": "object",
@@ -1153,6 +1205,36 @@ const docTemplate = `{
                 }
             }
         },
+        "models.MachineBasic": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
+                },
+                "estimate_time": {
+                    "description": "in minutes",
+                    "type": "integer",
+                    "example": 120
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "3D Printer Model X"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
+                }
+            }
+        },
         "models.Role": {
             "type": "object",
             "properties": {
@@ -1183,7 +1265,7 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string",
-                    "example": "3D printing and modeling tasks"
+                    "example": "3D printing services"
                 },
                 "id": {
                     "type": "integer",
@@ -1192,8 +1274,33 @@ const docTemplate = `{
                 "machines": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.Machine"
+                        "$ref": "#/definitions/models.MachineBasic"
                     }
+                },
+                "name": {
+                    "type": "string",
+                    "example": "3D Printing"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
+                }
+            }
+        },
+        "models.TaskTypeBasic": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "3D printing services"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
                 },
                 "name": {
                     "type": "string",
@@ -1221,11 +1328,36 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 1,
                     "example": 3
+                },
+                "task_type_id": {
+                    "type": "integer",
+                    "example": 2
                 }
             }
         },
         "models.UpdateTaskTypeRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Updated description"
+                },
+                "machines": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "example": [
+                        1,
+                        2,
+                        3
+                    ]
+                },
+                "name": {
+                    "type": "string",
+                    "example": "3D Printing Updated"
+                }
+            }
         },
         "models.UpdateUserRequest": {
             "type": "object",
@@ -1267,6 +1399,12 @@ const docTemplate = `{
                     "type": "string",
                     "example": "member"
                 },
+                "task_types": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.TaskTypeBasic"
+                    }
+                },
                 "updated_at": {
                     "type": "string",
                     "example": "2023-01-01T00:00:00Z"
@@ -1274,7 +1412,23 @@ const docTemplate = `{
             }
         },
         "models.UserTaskAssignmentRequest": {
-            "type": "object"
+            "type": "object",
+            "required": [
+                "task_types"
+            ],
+            "properties": {
+                "task_types": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "example": [
+                        1,
+                        2,
+                        3
+                    ]
+                }
+            }
         }
     }
 }`

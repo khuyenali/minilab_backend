@@ -5,6 +5,7 @@ import (
 	"mini-lab-api/internal/models"
 	"mini-lab-api/internal/repository"
 	"strings"
+	"errors"
 )
 
 // TaskTypeService defines the interface for task type business operations
@@ -59,6 +60,10 @@ func (s *taskTypeService) CreateTaskType(ctx context.Context, req models.CreateT
 	
 	taskType, err := s.taskTypeRepo.Create(ctx, req)
 	if err != nil {
+		// Check for machine validation errors
+		if errors.Is(err, repository.ErrInvalidMachineIDs) {
+			return nil, ErrInvalidMachineIDs
+		}
 		return nil, err
 	}
 	
@@ -80,6 +85,10 @@ func (s *taskTypeService) UpdateTaskType(ctx context.Context, id int32, req mode
 	if err != nil {
 		if err == repository.ErrTaskTypeNotFound {
 			return nil, ErrTaskTypeNotFound
+		}
+		// Check for machine validation errors
+		if errors.Is(err, repository.ErrInvalidMachineIDs) {
+			return nil, ErrInvalidMachineIDs
 		}
 		return nil, err
 	}

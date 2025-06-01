@@ -18,13 +18,15 @@ type MachineService interface {
 
 // machineService implements MachineService
 type machineService struct {
-	machineRepo repository.MachineRepository
+	machineRepo   repository.MachineRepository
+	taskTypeRepo  repository.TaskTypeRepository
 }
 
 // NewMachineService creates a new machine service
-func NewMachineService(machineRepo repository.MachineRepository) MachineService {
+func NewMachineService(machineRepo repository.MachineRepository, taskTypeRepo repository.TaskTypeRepository) MachineService {
 	return &machineService{
-		machineRepo: machineRepo,
+		machineRepo:  machineRepo,
+		taskTypeRepo: taskTypeRepo,
 	}
 }
 
@@ -57,6 +59,17 @@ func (s *machineService) CreateMachine(ctx context.Context, req models.CreateMac
 		return nil, err
 	}
 	
+	// Validate task type ID if provided
+	if req.TaskTypeID != nil {
+		_, err := s.taskTypeRepo.GetByID(ctx, *req.TaskTypeID)
+		if err != nil {
+			if err == repository.ErrTaskTypeNotFound {
+				return nil, ErrMachineInvalidTaskTypeID
+			}
+			return nil, err
+		}
+	}
+	
 	machine, err := s.machineRepo.Create(ctx, req)
 	if err != nil {
 		return nil, err
@@ -74,6 +87,34 @@ func (s *machineService) UpdateMachine(ctx context.Context, id int32, req models
 	// Validate input
 	if err := s.validateUpdateMachineRequest(req); err != nil {
 		return nil, err
+	}
+	
+	// Get current machine to check existing task type
+	currentMachine, err := s.machineRepo.GetByID(ctx, id)
+	if err != nil {
+		if err == repository.ErrMachineNotFound {
+			return nil, ErrMachineNotFound
+		}
+		return nil, err
+	}
+	
+	// Validate task type business rules
+	if req.TaskTypeProvided {
+		if req.TaskTypeID != nil {
+			// Validate that the new task type exists
+			_, err := s.taskTypeRepo.GetByID(ctx, *req.TaskTypeID)
+			if err != nil {
+				if err == repository.ErrTaskTypeNotFound {
+					return nil, ErrMachineInvalidTaskTypeID
+				}
+				return nil, err
+			}
+		} else {
+			// Check if machine currently has a task type - if so, cannot set to null
+			if currentMachine.TaskTypeID != nil {
+				return nil, ErrMachineCannotRemoveTaskType
+			}
+		}
 	}
 	
 	machine, err := s.machineRepo.Update(ctx, id, req)

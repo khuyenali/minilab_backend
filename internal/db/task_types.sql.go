@@ -48,7 +48,7 @@ const getMachinesByTaskType = `-- name: GetMachinesByTaskType :many
 SELECT m.id, m.machine_name, m.quantity, m.estimate_time, m.type_id, m.created_at, m.updated_at 
 FROM machines m 
 WHERE m.type_id = $1 
-ORDER BY m.machine_name
+ORDER BY m.id
 `
 
 func (q *Queries) GetMachinesByTaskType(ctx context.Context, typeID sql.NullInt32) ([]Machine, error) {
@@ -123,7 +123,7 @@ func (q *Queries) GetTaskTypeWithMachines(ctx context.Context, id int32) (TaskTy
 const listTaskTypes = `-- name: ListTaskTypes :many
 SELECT id, type_name, description, created_at, updated_at 
 FROM task_types 
-ORDER BY created_at DESC
+ORDER BY id
 `
 
 func (q *Queries) ListTaskTypes(ctx context.Context) ([]TaskType, error) {

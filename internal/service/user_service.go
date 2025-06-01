@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"mini-lab-api/internal/models"
 	"mini-lab-api/internal/repository"
@@ -21,13 +22,15 @@ type UserService interface {
 type userService struct {
 	userRepo       repository.UserRepository
 	userToTypeRepo repository.UserToTypeRepository
+	taskTypeRepo   repository.TaskTypeRepository
 }
 
 // NewUserService creates a new user service
-func NewUserService(userRepo repository.UserRepository, userToTypeRepo repository.UserToTypeRepository) UserService {
+func NewUserService(userRepo repository.UserRepository, userToTypeRepo repository.UserToTypeRepository, taskTypeRepo repository.TaskTypeRepository) UserService {
 	return &userService{
 		userRepo:       userRepo,
 		userToTypeRepo: userToTypeRepo,
+		taskTypeRepo:   taskTypeRepo,
 	}
 }
 
@@ -213,6 +216,23 @@ func (s *userService) AssignTaskTypes(ctx context.Context, userID int32, req mod
 	// Validate task type IDs
 	if len(req.TaskTypeIDs) == 0 {
 		return ErrInvalidTaskTypeAssignment
+	}
+	
+	// Validate that all task type IDs exist
+	var invalidIDs []int32
+	for _, taskTypeID := range req.TaskTypeIDs {
+		_, err := s.taskTypeRepo.GetByID(ctx, taskTypeID)
+		if err != nil {
+			if err == repository.ErrTaskTypeNotFound {
+				invalidIDs = append(invalidIDs, taskTypeID)
+			} else {
+				return err
+			}
+		}
+	}
+	
+	if len(invalidIDs) > 0 {
+		return fmt.Errorf("invalid task type IDs: %v", invalidIDs)
 	}
 	
 	// Assign task types

@@ -72,15 +72,15 @@ func main() {
 	// Initialize repository layer
 	userRepo := repository.NewUserRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
-	taskTypeRepo := repository.NewTaskTypeRepository(db)
 	machineRepo := repository.NewMachineRepository(db)
+	taskTypeRepo := repository.NewTaskTypeRepository(db, machineRepo)
 	userToTypeRepo := repository.NewUserToTypeRepository(db)
 
 	// Initialize service layer
-	userService := service.NewUserService(userRepo, userToTypeRepo)
+	userService := service.NewUserService(userRepo, userToTypeRepo, taskTypeRepo)
 	roleService := service.NewRoleService(roleRepo)
 	taskTypeService := service.NewTaskTypeService(taskTypeRepo)
-	machineService := service.NewMachineService(machineRepo)
+	machineService := service.NewMachineService(machineRepo, taskTypeRepo)
 
 	// Set Gin mode
 	if cfg.Environment == "production" {

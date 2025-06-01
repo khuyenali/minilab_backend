@@ -115,7 +115,7 @@ SELECT u.id, u.name, u.email, u.role_id, r.role_name, u.created_at, u.updated_at
 FROM users u
 JOIN roles r ON u.role_id = r.id
 WHERE r.role_name = $1
-ORDER BY u.created_at DESC
+ORDER BY u.id
 `
 
 type GetUsersByRoleRow struct {
@@ -159,11 +159,60 @@ func (q *Queries) GetUsersByRole(ctx context.Context, roleName string) ([]GetUse
 	return items, nil
 }
 
+const getUsersByRoleID = `-- name: GetUsersByRoleID :many
+SELECT u.id, u.name, u.email, u.role_id, r.role_name, u.created_at, u.updated_at 
+FROM users u
+JOIN roles r ON u.role_id = r.id
+WHERE u.role_id = $1
+ORDER BY u.id
+`
+
+type GetUsersByRoleIDRow struct {
+	ID        int32
+	Name      string
+	Email     string
+	RoleID    int32
+	RoleName  string
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+}
+
+func (q *Queries) GetUsersByRoleID(ctx context.Context, roleID int32) ([]GetUsersByRoleIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, getUsersByRoleID, roleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUsersByRoleIDRow
+	for rows.Next() {
+		var i GetUsersByRoleIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Email,
+			&i.RoleID,
+			&i.RoleName,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUsers = `-- name: ListUsers :many
 SELECT u.id, u.name, u.email, u.role_id, r.role_name, u.created_at, u.updated_at 
 FROM users u
 JOIN roles r ON u.role_id = r.id
-ORDER BY u.created_at DESC
+ORDER BY u.id
 `
 
 type ListUsersRow struct {

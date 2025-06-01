@@ -9,4 +9,5 @@ var (
 	ErrRoleNotFound     = errors.New("role not found")
 	ErrTaskTypeNotFound = errors.New("task type not found")
 	ErrMachineNotFound  = errors.New("machine not found")
+	ErrInvalidMachineIDs = errors.New("one or more machine IDs are invalid")
 ) 

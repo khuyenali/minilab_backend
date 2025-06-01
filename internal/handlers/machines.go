@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -121,7 +122,8 @@ func (h *Handler) CreateMachine(c *gin.Context) {
 		if err == service.ErrInvalidMachineName || 
 		   err == service.ErrMachineNameTooLong || 
 		   err == service.ErrInvalidMachineQuantity ||
-		   err == service.ErrInvalidMachineEstimateTime {
+		   err == service.ErrInvalidMachineEstimateTime ||
+		   err == service.ErrMachineInvalidTaskTypeID {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Validation error",
 				"status":  "error",
@@ -170,8 +172,34 @@ func (h *Handler) UpdateMachine(c *gin.Context) {
 		return
 	}
 
+	// Read raw body to parse JSON
+	body, err := c.GetRawData()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Failed to read request body",
+			"status":  "error",
+			"message": err.Error(),
+		})
+		return
+	}
+	
+	// Parse JSON to detect if task_type_id field is provided
+	var rawData map[string]interface{}
+	if err := json.Unmarshal(body, &rawData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid JSON format",
+			"status":  "error",
+			"message": err.Error(),
+		})
+		return
+	}
+	
+	// Check if task_type_id field is present
+	_, taskTypeProvided := rawData["task_type_id"]
+	
+	// Parse into the struct
 	var req models.UpdateMachineRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := json.Unmarshal(body, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid request data",
 			"status":  "error",
@@ -179,6 +207,8 @@ func (h *Handler) UpdateMachine(c *gin.Context) {
 		})
 		return
 	}
+	
+	req.TaskTypeProvided = taskTypeProvided
 
 	machine, err := h.machineService.UpdateMachine(c.Request.Context(), int32(id), req)
 	if err != nil {
@@ -196,7 +226,9 @@ func (h *Handler) UpdateMachine(c *gin.Context) {
 		   err == service.ErrInvalidMachineName || 
 		   err == service.ErrMachineNameTooLong || 
 		   err == service.ErrInvalidMachineQuantity ||
-		   err == service.ErrInvalidMachineEstimateTime {
+		   err == service.ErrInvalidMachineEstimateTime ||
+		   err == service.ErrMachineInvalidTaskTypeID ||
+		   err == service.ErrMachineCannotRemoveTaskType {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Validation error",
 				"status":  "error",

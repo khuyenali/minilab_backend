@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"mini-lab-api/internal/db"
 	"mini-lab-api/internal/models"
+	"strings"
 )
 
 // UserRepository defines the interface for user data operations
@@ -13,6 +14,7 @@ type UserRepository interface {
 	GetByEmail(ctx context.Context, email string) (*models.User, error)
 	List(ctx context.Context, filters models.UserFilters) ([]*models.User, error)
 	GetByRole(ctx context.Context, roleName string) ([]*models.User, error)
+	GetByRoleID(ctx context.Context, roleID int32) ([]*models.User, error)
 	Create(ctx context.Context, req models.CreateUserRequest) (*models.User, error)
 	Update(ctx context.Context, id int32, req models.UpdateUserRequest) (*models.User, error)
 	Delete(ctx context.Context, id int32) error
@@ -42,7 +44,18 @@ func (r *userRepository) GetByID(ctx context.Context, id int32) (*models.User, e
 		return nil, err
 	}
 	
-	return models.FromGetUserRow(row), nil
+	user := models.FromGetUserRow(row)
+	
+	// Get task types for this user
+	taskTypeRows, err := r.queries.GetUserTaskTypes(ctx, id)
+	if err != nil {
+		// If we can't get task types, just return user without them
+		user.TaskTypes = []*models.TaskTypeBasic{}
+	} else {
+		user.TaskTypes = models.FromGetUserTaskTypesRows(taskTypeRows)
+	}
+	
+	return user, nil
 }
 
 // GetByEmail retrieves a user by email
@@ -55,22 +68,77 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*models.
 		return nil, err
 	}
 	
-	return models.FromGetUserByEmailRow(row), nil
+	user := models.FromGetUserByEmailRow(row)
+	
+	// Get task types for this user
+	taskTypeRows, err := r.queries.GetUserTaskTypes(ctx, user.ID)
+	if err != nil {
+		// If we can't get task types, just return user without them
+		user.TaskTypes = []*models.TaskTypeBasic{}
+	} else {
+		user.TaskTypes = models.FromGetUserTaskTypesRows(taskTypeRows)
+	}
+	
+	return user, nil
 }
 
 // List retrieves users with optional filtering
 func (r *userRepository) List(ctx context.Context, filters models.UserFilters) ([]*models.User, error) {
-	// Check if filtering by role
-	if filters.Role != "" {
-		return r.GetByRole(ctx, filters.Role)
+	var users []*models.User
+	var err error
+	
+	// Check if filtering by role ID
+	if filters.RoleID != nil {
+		users, err = r.GetByRoleID(ctx, *filters.RoleID)
+	} else {
+		rows, err := r.queries.ListUsers(ctx)
+		if err != nil {
+			return nil, err
+		}
+		users = models.FromListUsersRows(rows)
 	}
 	
-	rows, err := r.queries.ListUsers(ctx)
 	if err != nil {
 		return nil, err
 	}
 	
-	return models.FromListUsersRows(rows), nil
+	// Get task types for each user
+	for _, user := range users {
+		taskTypeRows, err := r.queries.GetUserTaskTypes(ctx, user.ID)
+		if err != nil {
+			// If we can't get task types, just set empty array
+			user.TaskTypes = []*models.TaskTypeBasic{}
+		} else {
+			user.TaskTypes = models.FromGetUserTaskTypesRows(taskTypeRows)
+		}
+	}
+	
+	// Apply search filter if provided
+	if filters.Search != "" {
+		var filteredUsers []*models.User
+		search := strings.ToLower(filters.Search)
+		for _, user := range users {
+			if strings.Contains(strings.ToLower(user.Name), search) || 
+			   strings.Contains(strings.ToLower(user.Email), search) {
+				filteredUsers = append(filteredUsers, user)
+			}
+		}
+		users = filteredUsers
+	}
+	
+	// Apply offset
+	if filters.Offset > 0 && int(filters.Offset) < len(users) {
+		users = users[filters.Offset:]
+	} else if filters.Offset > 0 {
+		return []*models.User{}, nil // Offset beyond available data
+	}
+	
+	// Apply limit
+	if filters.Limit > 0 && int(filters.Limit) < len(users) {
+		users = users[:filters.Limit]
+	}
+	
+	return users, nil
 }
 
 // GetByRole retrieves users by role name
@@ -80,7 +148,19 @@ func (r *userRepository) GetByRole(ctx context.Context, roleName string) ([]*mod
 		return nil, err
 	}
 	
-	return models.FromGetUsersByRoleRows(rows), nil
+	users := models.FromGetUsersByRoleRows(rows)
+	return users, nil
+}
+
+// GetByRoleID retrieves users by role ID
+func (r *userRepository) GetByRoleID(ctx context.Context, roleID int32) ([]*models.User, error) {
+	rows, err := r.queries.GetUsersByRoleID(ctx, roleID)
+	if err != nil {
+		return nil, err
+	}
+	
+	users := models.FromGetUsersByRoleIDRows(rows)
+	return users, nil
 }
 
 // Create creates a new user

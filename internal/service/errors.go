@@ -1,6 +1,8 @@
 package service
 
-import "errors"
+import (
+	"errors"
+)
 
 // Service errors
 var (
@@ -24,6 +26,7 @@ var (
 	ErrInvalidTaskTypeName           = errors.New("invalid task type name")
 	ErrTaskTypeNameTooLong           = errors.New("task type name is too long")
 	ErrTaskTypeDescriptionTooLong    = errors.New("task type description is too long")
+	ErrInvalidMachineIDs             = errors.New("one or more machine IDs are invalid")
 	
 	// Machine errors
 	ErrMachineNotFound               = errors.New("machine not found")
@@ -32,8 +35,11 @@ var (
 	ErrMachineNameTooLong            = errors.New("machine name is too long")
 	ErrInvalidMachineQuantity        = errors.New("machine quantity must be greater than 0")
 	ErrInvalidMachineEstimateTime    = errors.New("machine estimate time must be greater than 0")
+	ErrMachineInvalidTaskTypeID      = errors.New("invalid task type ID")
+	ErrMachineCannotRemoveTaskType   = errors.New("cannot remove task type from machine - can only change to another task type")
 	
 	// User task assignment errors
 	ErrInvalidUserRole               = errors.New("only members can be assigned task types")
 	ErrInvalidTaskTypeAssignment     = errors.New("invalid task type assignment")
+	ErrInvalidTaskTypeIDs            = errors.New("one or more task type IDs are invalid")
 ) 

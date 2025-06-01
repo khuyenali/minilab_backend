@@ -1,5 +1,5 @@
 -- name: GetUserTaskTypes :many
-SELECT ut.user_id, ut.type_id, t.type_name, t.description, ut.created_at
+SELECT ut.user_id, ut.type_id, t.type_name, t.description, t.created_at, t.updated_at, ut.created_at as assignment_created_at
 FROM user_to_type ut
 JOIN task_types t ON ut.type_id = t.id
 WHERE ut.user_id = $1

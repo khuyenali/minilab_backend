@@ -8,7 +8,7 @@ WHERE u.id = $1 LIMIT 1;
 SELECT u.id, u.name, u.email, u.role_id, r.role_name, u.created_at, u.updated_at 
 FROM users u
 JOIN roles r ON u.role_id = r.id
-ORDER BY u.created_at DESC;
+ORDER BY u.id;
 
 -- name: CreateUser :one
 INSERT INTO users (name, email, role_id) 
@@ -36,4 +36,11 @@ SELECT u.id, u.name, u.email, u.role_id, r.role_name, u.created_at, u.updated_at
 FROM users u
 JOIN roles r ON u.role_id = r.id
 WHERE r.role_name = $1
-ORDER BY u.created_at DESC; 
+ORDER BY u.id;
+
+-- name: GetUsersByRoleID :many
+SELECT u.id, u.name, u.email, u.role_id, r.role_name, u.created_at, u.updated_at 
+FROM users u
+JOIN roles r ON u.role_id = r.id
+WHERE u.role_id = $1
+ORDER BY u.id; 

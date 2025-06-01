@@ -8,7 +8,20 @@ package db
 import (
 	"context"
 	"database/sql"
+
+	"github.com/lib/pq"
 )
+
+const clearMachineTaskType = `-- name: ClearMachineTaskType :exec
+UPDATE machines 
+SET type_id = NULL, updated_at = NOW() 
+WHERE type_id = $1
+`
+
+func (q *Queries) ClearMachineTaskType(ctx context.Context, typeID sql.NullInt32) error {
+	_, err := q.db.ExecContext(ctx, clearMachineTaskType, typeID)
+	return err
+}
 
 const createMachine = `-- name: CreateMachine :one
 INSERT INTO machines (machine_name, quantity, estimate_time, type_id) 
@@ -74,10 +87,83 @@ func (q *Queries) GetMachine(ctx context.Context, id int32) (Machine, error) {
 	return i, err
 }
 
+const getMachineWithTaskType = `-- name: GetMachineWithTaskType :one
+SELECT m.id, m.machine_name, m.quantity, m.estimate_time, m.type_id, m.created_at, m.updated_at,
+       tt.type_name as task_type_name
+FROM machines m
+LEFT JOIN task_types tt ON m.type_id = tt.id
+WHERE m.id = $1 LIMIT 1
+`
+
+type GetMachineWithTaskTypeRow struct {
+	ID           int32
+	MachineName  string
+	Quantity     int32
+	EstimateTime int32
+	TypeID       sql.NullInt32
+	CreatedAt    sql.NullTime
+	UpdatedAt    sql.NullTime
+	TaskTypeName sql.NullString
+}
+
+func (q *Queries) GetMachineWithTaskType(ctx context.Context, id int32) (GetMachineWithTaskTypeRow, error) {
+	row := q.db.QueryRowContext(ctx, getMachineWithTaskType, id)
+	var i GetMachineWithTaskTypeRow
+	err := row.Scan(
+		&i.ID,
+		&i.MachineName,
+		&i.Quantity,
+		&i.EstimateTime,
+		&i.TypeID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TaskTypeName,
+	)
+	return i, err
+}
+
+const getMachinesByIDs = `-- name: GetMachinesByIDs :many
+SELECT id, machine_name, quantity, estimate_time, type_id, created_at, updated_at 
+FROM machines 
+WHERE id = ANY($1::int[])
+ORDER BY id
+`
+
+func (q *Queries) GetMachinesByIDs(ctx context.Context, dollar_1 []int32) ([]Machine, error) {
+	rows, err := q.db.QueryContext(ctx, getMachinesByIDs, pq.Array(dollar_1))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Machine
+	for rows.Next() {
+		var i Machine
+		if err := rows.Scan(
+			&i.ID,
+			&i.MachineName,
+			&i.Quantity,
+			&i.EstimateTime,
+			&i.TypeID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMachines = `-- name: ListMachines :many
 SELECT id, machine_name, quantity, estimate_time, type_id, created_at, updated_at 
 FROM machines 
-ORDER BY machine_name
+ORDER BY id
 `
 
 func (q *Queries) ListMachines(ctx context.Context) ([]Machine, error) {
@@ -97,6 +183,57 @@ func (q *Queries) ListMachines(ctx context.Context) ([]Machine, error) {
 			&i.TypeID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMachinesWithTaskType = `-- name: ListMachinesWithTaskType :many
+SELECT m.id, m.machine_name, m.quantity, m.estimate_time, m.type_id, m.created_at, m.updated_at,
+       tt.type_name as task_type_name
+FROM machines m
+LEFT JOIN task_types tt ON m.type_id = tt.id
+ORDER BY m.id
+`
+
+type ListMachinesWithTaskTypeRow struct {
+	ID           int32
+	MachineName  string
+	Quantity     int32
+	EstimateTime int32
+	TypeID       sql.NullInt32
+	CreatedAt    sql.NullTime
+	UpdatedAt    sql.NullTime
+	TaskTypeName sql.NullString
+}
+
+func (q *Queries) ListMachinesWithTaskType(ctx context.Context) ([]ListMachinesWithTaskTypeRow, error) {
+	rows, err := q.db.QueryContext(ctx, listMachinesWithTaskType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMachinesWithTaskTypeRow
+	for rows.Next() {
+		var i ListMachinesWithTaskTypeRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MachineName,
+			&i.Quantity,
+			&i.EstimateTime,
+			&i.TypeID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TaskTypeName,
 		); err != nil {
 			return nil, err
 		}
@@ -131,6 +268,58 @@ func (q *Queries) UpdateMachine(ctx context.Context, arg UpdateMachineParams) (M
 		arg.MachineName,
 		arg.Quantity,
 		arg.EstimateTime,
+	)
+	var i Machine
+	err := row.Scan(
+		&i.ID,
+		&i.MachineName,
+		&i.Quantity,
+		&i.EstimateTime,
+		&i.TypeID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateMachineTaskType = `-- name: UpdateMachineTaskType :exec
+UPDATE machines 
+SET type_id = $2, updated_at = NOW() 
+WHERE id = $1
+`
+
+type UpdateMachineTaskTypeParams struct {
+	ID     int32
+	TypeID sql.NullInt32
+}
+
+func (q *Queries) UpdateMachineTaskType(ctx context.Context, arg UpdateMachineTaskTypeParams) error {
+	_, err := q.db.ExecContext(ctx, updateMachineTaskType, arg.ID, arg.TypeID)
+	return err
+}
+
+const updateMachineWithTaskType = `-- name: UpdateMachineWithTaskType :one
+UPDATE machines 
+SET machine_name = $2, quantity = $3, estimate_time = $4, type_id = $5, updated_at = NOW() 
+WHERE id = $1 
+RETURNING id, machine_name, quantity, estimate_time, type_id, created_at, updated_at
+`
+
+type UpdateMachineWithTaskTypeParams struct {
+	ID           int32
+	MachineName  string
+	Quantity     int32
+	EstimateTime int32
+	TypeID       sql.NullInt32
+}
+
+func (q *Queries) UpdateMachineWithTaskType(ctx context.Context, arg UpdateMachineWithTaskTypeParams) (Machine, error) {
+	row := q.db.QueryRowContext(ctx, updateMachineWithTaskType,
+		arg.ID,
+		arg.MachineName,
+		arg.Quantity,
+		arg.EstimateTime,
+		arg.TypeID,
 	)
 	var i Machine
 	err := row.Scan(

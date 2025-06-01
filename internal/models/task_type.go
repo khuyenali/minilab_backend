@@ -7,26 +7,35 @@ import (
 
 // TaskType represents a task type in the system (domain model)
 type TaskType struct {
-	ID          int32      `json:"id" example:"1"`
-	TypeName    string     `json:"name" example:"3D Printing"`
-	Description *string    `json:"description,omitempty" example:"3D printing and modeling tasks"`
-	Machines    []*Machine `json:"machines,omitempty"`
-	CreatedAt   time.Time  `json:"created_at" example:"2023-01-01T00:00:00Z"`
-	UpdatedAt   time.Time  `json:"updated_at" example:"2023-01-01T00:00:00Z"`
+	ID          int32            `json:"id" example:"1"`
+	TypeName    string           `json:"name" example:"3D Printing"`
+	Description *string          `json:"description" example:"3D printing services"`
+	Machines    []*MachineBasic  `json:"machines"`
+	CreatedAt   time.Time        `json:"created_at" example:"2023-01-01T00:00:00Z"`
+	UpdatedAt   time.Time        `json:"updated_at" example:"2023-01-01T00:00:00Z"`
+}
+
+// TaskTypeBasic represents a task type without machines (for user contexts)
+type TaskTypeBasic struct {
+	ID          int32     `json:"id" example:"1"`
+	TypeName    string    `json:"name" example:"3D Printing"`
+	Description *string   `json:"description" example:"3D printing services"`
+	CreatedAt   time.Time `json:"created_at" example:"2023-01-01T00:00:00Z"`
+	UpdatedAt   time.Time `json:"updated_at" example:"2023-01-01T00:00:00Z"`
 }
 
 // CreateTaskTypeRequest represents the request to create a new task type
 type CreateTaskTypeRequest struct {
 	Name        string  `json:"name" binding:"required" example:"3D Printing"`
 	Description *string `json:"description,omitempty" example:"3D printing and modeling tasks"`
-	MachineIDs  []int32 `json:"machines,omitempty" example:"[1,2]"`
+	MachineIDs  []int32 `json:"machines,omitempty" swaggertype:"array,integer" example:"1,2"`
 }
 
 // UpdateTaskTypeRequest represents the request to update a task type
 type UpdateTaskTypeRequest struct {
 	Name        string  `json:"name" example:"3D Printing Updated"`
 	Description *string `json:"description,omitempty" example:"Updated description"`
-	MachineIDs  []int32 `json:"machines,omitempty" example:"[1,2,3]"`
+	MachineIDs  []int32 `json:"machines,omitempty" swaggertype:"array,integer" example:"1,2,3"`
 }
 
 // FromDBTaskType converts database model to domain model

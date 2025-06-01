@@ -120,7 +120,8 @@ func (h *Handler) CreateTaskType(c *gin.Context) {
 		// Handle validation errors
 		if err == service.ErrInvalidTaskTypeName || 
 		   err == service.ErrTaskTypeNameTooLong || 
-		   err == service.ErrTaskTypeDescriptionTooLong {
+		   err == service.ErrTaskTypeDescriptionTooLong ||
+		   err == service.ErrInvalidMachineIDs {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Validation error",
 				"status":  "error",
@@ -194,7 +195,8 @@ func (h *Handler) UpdateTaskType(c *gin.Context) {
 		if err == service.ErrInvalidTaskTypeID || 
 		   err == service.ErrInvalidTaskTypeName || 
 		   err == service.ErrTaskTypeNameTooLong || 
-		   err == service.ErrTaskTypeDescriptionTooLong {
+		   err == service.ErrTaskTypeDescriptionTooLong ||
+		   err == service.ErrInvalidMachineIDs {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Validation error",
 				"status":  "error",

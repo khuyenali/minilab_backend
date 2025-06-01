@@ -77,7 +77,7 @@ func (q *Queries) GetTaskTypeUsers(ctx context.Context, typeID int32) ([]GetTask
 }
 
 const getUserTaskTypes = `-- name: GetUserTaskTypes :many
-SELECT ut.user_id, ut.type_id, t.type_name, t.description, ut.created_at
+SELECT ut.user_id, ut.type_id, t.type_name, t.description, t.created_at, t.updated_at, ut.created_at as assignment_created_at
 FROM user_to_type ut
 JOIN task_types t ON ut.type_id = t.id
 WHERE ut.user_id = $1
@@ -85,11 +85,13 @@ ORDER BY t.type_name
 `
 
 type GetUserTaskTypesRow struct {
-	UserID      int32
-	TypeID      int32
-	TypeName    string
-	Description sql.NullString
-	CreatedAt   sql.NullTime
+	UserID              int32
+	TypeID              int32
+	TypeName            string
+	Description         sql.NullString
+	CreatedAt           sql.NullTime
+	UpdatedAt           sql.NullTime
+	AssignmentCreatedAt sql.NullTime
 }
 
 func (q *Queries) GetUserTaskTypes(ctx context.Context, userID int32) ([]GetUserTaskTypesRow, error) {
@@ -107,6 +109,8 @@ func (q *Queries) GetUserTaskTypes(ctx context.Context, userID int32) ([]GetUser
 			&i.TypeName,
 			&i.Description,
 			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.AssignmentCreatedAt,
 		); err != nil {
 			return nil, err
 		}

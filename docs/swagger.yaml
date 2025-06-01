@@ -26,7 +26,7 @@ definitions:
         example: 2
         minimum: 1
         type: integer
-      task_type:
+      task_type_id:
         example: 1
         type: integer
     required:
@@ -35,6 +35,22 @@ definitions:
     - quantity
     type: object
   models.CreateTaskTypeRequest:
+    properties:
+      description:
+        example: 3D printing and modeling tasks
+        type: string
+      machines:
+        example:
+        - 1
+        - 2
+        items:
+          type: integer
+        type: array
+      name:
+        example: 3D Printing
+        type: string
+    required:
+    - name
     type: object
   models.CreateUserRequest:
     properties:
@@ -76,6 +92,28 @@ definitions:
         example: "2023-01-01T00:00:00Z"
         type: string
     type: object
+  models.MachineBasic:
+    properties:
+      created_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      estimate_time:
+        description: in minutes
+        example: 120
+        type: integer
+      id:
+        example: 1
+        type: integer
+      name:
+        example: 3D Printer Model X
+        type: string
+      quantity:
+        example: 2
+        type: integer
+      updated_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+    type: object
   models.Role:
     properties:
       created_at:
@@ -97,15 +135,33 @@ definitions:
         example: "2023-01-01T00:00:00Z"
         type: string
       description:
-        example: 3D printing and modeling tasks
+        example: 3D printing services
         type: string
       id:
         example: 1
         type: integer
       machines:
         items:
-          $ref: '#/definitions/models.Machine'
+          $ref: '#/definitions/models.MachineBasic'
         type: array
+      name:
+        example: 3D Printing
+        type: string
+      updated_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+    type: object
+  models.TaskTypeBasic:
+    properties:
+      created_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      description:
+        example: 3D printing services
+        type: string
+      id:
+        example: 1
+        type: integer
       name:
         example: 3D Printing
         type: string
@@ -126,8 +182,26 @@ definitions:
         example: 3
         minimum: 1
         type: integer
+      task_type_id:
+        example: 2
+        type: integer
     type: object
   models.UpdateTaskTypeRequest:
+    properties:
+      description:
+        example: Updated description
+        type: string
+      machines:
+        example:
+        - 1
+        - 2
+        - 3
+        items:
+          type: integer
+        type: array
+      name:
+        example: 3D Printing Updated
+        type: string
     type: object
   models.UpdateUserRequest:
     properties:
@@ -158,11 +232,26 @@ definitions:
       role:
         example: member
         type: string
+      task_types:
+        items:
+          $ref: '#/definitions/models.TaskTypeBasic'
+        type: array
       updated_at:
         example: "2023-01-01T00:00:00Z"
         type: string
     type: object
   models.UserTaskAssignmentRequest:
+    properties:
+      task_types:
+        example:
+        - 1
+        - 2
+        - 3
+        items:
+          type: integer
+        type: array
+    required:
+    - task_types
     type: object
 host: localhost:8080
 info:
@@ -627,7 +716,23 @@ paths:
       - users
   /api/v1/users:
     get:
-      description: Get a list of all users
+      description: Get a list of all users with optional role filtering
+      parameters:
+      - description: Filter by role ID
+        example: 3
+        in: query
+        name: role_id
+        type: integer
+      - description: Limit the number of results
+        example: 50
+        in: query
+        name: limit
+        type: integer
+      - description: Offset for pagination
+        example: 0
+        in: query
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
@@ -642,6 +747,10 @@ paths:
                     $ref: '#/definitions/models.User'
                   type: array
               type: object
+        "400":
+          description: Invalid query parameters
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
         "500":
           description: Internal server error
           schema:

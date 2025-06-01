@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"mini-lab-api/internal/models"
@@ -11,14 +12,69 @@ import (
 
 // GetUsers handles GET /users
 // @Summary Get all users
-// @Description Get a list of all users
+// @Description Get a list of all users with optional role filtering
 // @Tags users
 // @Produce json
+// @Param role_id query int false "Filter by role ID" example(3)
+// @Param limit query int false "Limit the number of results" example(50)
+// @Param offset query int false "Offset for pagination" example(0)
 // @Success 200 {object} ApiResponse{data=[]models.User} "List of users"
+// @Failure 400 {object} ApiResponse "Invalid query parameters"
 // @Failure 500 {object} ApiResponse "Internal server error"
 // @Router /api/v1/users [get]
 func (h *Handler) GetUsers(c *gin.Context) {
-	users, err := h.userService.GetUsers(c.Request.Context(), models.UserFilters{})
+	// Parse query parameters
+	filters := models.UserFilters{}
+	
+	// Parse role_id filter
+	if roleIDStr := c.Query("role_id"); roleIDStr != "" {
+		if roleID, err := strconv.ParseInt(roleIDStr, 10, 32); err == nil && roleID > 0 {
+			roleID32 := int32(roleID)
+			filters.RoleID = &roleID32
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid role_id parameter",
+				"status":  "error",
+				"message": "Role ID must be a positive number",
+			})
+			return
+		}
+	}
+	
+	// Parse limit
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if limit, err := strconv.ParseInt(limitStr, 10, 32); err == nil && limit > 0 {
+			filters.Limit = int32(limit)
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid limit parameter",
+				"status":  "error",
+				"message": "Limit must be a positive number",
+			})
+			return
+		}
+	}
+	
+	// Parse offset
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		if offset, err := strconv.ParseInt(offsetStr, 10, 32); err == nil && offset >= 0 {
+			filters.Offset = int32(offset)
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid offset parameter",
+				"status":  "error",
+				"message": "Offset must be a non-negative number",
+			})
+			return
+		}
+	}
+	
+	// Parse search
+	if search := c.Query("search"); search != "" {
+		filters.Search = search
+	}
+
+	users, err := h.userService.GetUsers(c.Request.Context(), filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to retrieve users",
@@ -342,6 +398,16 @@ func (h *Handler) AssignUserTaskTypes(c *gin.Context) {
 		if err == service.ErrInvalidUserID || err == service.ErrInvalidTaskTypeAssignment {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Validation error",
+				"status":  "error",
+				"message": err.Error(),
+			})
+			return
+		}
+
+		// Check for detailed invalid task type IDs error
+		if strings.Contains(err.Error(), "invalid task type IDs:") {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid task type IDs",
 				"status":  "error",
 				"message": err.Error(),
 			})
