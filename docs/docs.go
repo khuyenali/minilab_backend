@@ -685,6 +685,273 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/tasks": {
+            "get": {
+                "description": "Get a list of all tasks",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Get all tasks",
+                "responses": {
+                    "200": {
+                        "description": "List of tasks",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ApiResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.Task"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new task with optional sub-tasks and user assignments",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Create a new task with sub-tasks and assignments",
+                "parameters": [
+                    {
+                        "description": "Task creation data with sub-tasks and assignments",
+                        "name": "task",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateTaskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Task created successfully with sub-tasks and assignments",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ApiResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Task"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input data",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/tasks/{id}": {
+            "get": {
+                "description": "Get a single task by its ID with associated sub-tasks and assignments",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Get task by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task details with sub-tasks and assignments",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ApiResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Task"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid task ID",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Task not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update an existing task by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Update a task",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Task update data",
+                        "name": "task",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateTaskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task updated successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ApiResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Task"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input data",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Task not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete an existing task by ID",
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Delete a task",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid task ID",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Task not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/user/{id}": {
             "put": {
                 "description": "Assign task types to a user (only for members)",
@@ -1124,6 +1391,44 @@ const docTemplate = `{
                 }
             }
         },
+        "models.CreateTaskRequest": {
+            "type": "object",
+            "required": [
+                "task_name"
+            ],
+            "properties": {
+                "end_time": {
+                    "type": "string",
+                    "example": "2024-07-05T00:00:00Z"
+                },
+                "note": {
+                    "type": "string",
+                    "example": "Annual company-wide retreat"
+                },
+                "priority": {
+                    "type": "string",
+                    "example": "medium"
+                },
+                "start_time": {
+                    "type": "string",
+                    "example": "2024-07-01T00:00:00Z"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "pending"
+                },
+                "sub_tasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.SubTaskRequest"
+                    }
+                },
+                "task_name": {
+                    "type": "string",
+                    "example": "Organize Company Retreat"
+                }
+            }
+        },
         "models.CreateTaskTypeRequest": {
             "type": "object",
             "required": [
@@ -1259,6 +1564,122 @@ const docTemplate = `{
                 }
             }
         },
+        "models.SubTask": {
+            "type": "object",
+            "properties": {
+                "assignments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.UserSubTaskAssignment"
+                    }
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Book the venue for the retreat"
+                },
+                "estimate_effort": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 105
+                },
+                "status": {
+                    "type": "string",
+                    "example": "pending"
+                },
+                "sub_task_name": {
+                    "type": "string",
+                    "example": "Venue Booking Sub-Task"
+                },
+                "task_id": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "type_id": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
+                }
+            }
+        },
+        "models.SubTaskRequest": {
+            "type": "object",
+            "required": [
+                "type_id"
+            ],
+            "properties": {
+                "type_id": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "user_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "example": [
+                        3,
+                        7
+                    ]
+                }
+            }
+        },
+        "models.Task": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
+                },
+                "end_time": {
+                    "type": "string",
+                    "example": "2024-07-05T00:00:00Z"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "note": {
+                    "type": "string",
+                    "example": "Annual company-wide retreat"
+                },
+                "priority": {
+                    "type": "string",
+                    "example": "high"
+                },
+                "start_time": {
+                    "type": "string",
+                    "example": "2024-07-01T00:00:00Z"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "pending"
+                },
+                "sub_tasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.SubTask"
+                    }
+                },
+                "task_name": {
+                    "type": "string",
+                    "example": "Organize Company Retreat"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
+                }
+            }
+        },
         "models.TaskType": {
             "type": "object",
             "properties": {
@@ -1333,6 +1754,35 @@ const docTemplate = `{
                 "task_type_id": {
                     "type": "integer",
                     "example": 2
+                }
+            }
+        },
+        "models.UpdateTaskRequest": {
+            "type": "object",
+            "properties": {
+                "end_time": {
+                    "type": "string",
+                    "example": "2024-07-05T00:00:00Z"
+                },
+                "note": {
+                    "type": "string",
+                    "example": "Updated note"
+                },
+                "priority": {
+                    "type": "string",
+                    "example": "high"
+                },
+                "start_time": {
+                    "type": "string",
+                    "example": "2024-07-01T00:00:00Z"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "in-progress"
+                },
+                "task_name": {
+                    "type": "string",
+                    "example": "Updated Task Name"
                 }
             }
         },
@@ -1433,6 +1883,38 @@ const docTemplate = `{
                 "user_name": {
                     "type": "string",
                     "example": "John Doe"
+                }
+            }
+        },
+        "models.UserSubTaskAssignment": {
+            "type": "object",
+            "properties": {
+                "assigned_at": {
+                    "type": "string",
+                    "example": "2023-01-01T12:00:00Z"
+                },
+                "assignment_id": {
+                    "type": "integer",
+                    "example": 201
+                },
+                "report": {
+                    "type": "string",
+                    "example": "Task assigned to implement the UI"
+                },
+                "sub_task_id": {
+                    "type": "integer",
+                    "example": 105
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2023-01-01T12:00:00Z"
+                },
+                "user_details": {
+                    "$ref": "#/definitions/models.UserBasic"
+                },
+                "user_id": {
+                    "type": "integer",
+                    "example": 3
                 }
             }
         },

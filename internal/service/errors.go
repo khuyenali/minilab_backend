@@ -42,4 +42,27 @@ var (
 	ErrInvalidUserRole               = errors.New("only members can be assigned task types")
 	ErrInvalidTaskTypeAssignment     = errors.New("invalid task type assignment")
 	ErrInvalidTaskTypeIDs            = errors.New("one or more task type IDs are invalid")
+	
+	// Task errors
+	ErrTaskNotFound                  = errors.New("task not found")
+	ErrInvalidTaskID                 = errors.New("invalid task ID")
+	ErrInvalidTaskName               = errors.New("invalid task name")
+	ErrTaskNameTooLong               = errors.New("task name is too long")
+	ErrTaskNoteTooLong               = errors.New("task note is too long")
+	ErrInvalidTaskStatus             = errors.New("invalid task status")
+	ErrInvalidTaskPriority           = errors.New("invalid task priority")
+	
+	// Sub-task errors
+	ErrSubTaskNotFound               = errors.New("sub-task not found")
+	ErrInvalidSubTaskID              = errors.New("invalid sub-task ID")
+	ErrInvalidSubTaskName            = errors.New("invalid sub-task name")
+	ErrSubTaskNameTooLong            = errors.New("sub-task name is too long")
+	ErrSubTaskDescriptionTooLong     = errors.New("sub-task description is too long")
+	ErrInvalidSubTaskStatus          = errors.New("invalid sub-task status")
+	ErrInvalidSubTaskEstimateEffort  = errors.New("invalid sub-task estimate effort")
+	
+	// Assignment errors
+	ErrAssignmentNotFound            = errors.New("assignment not found")
+	ErrInvalidAssignmentID           = errors.New("invalid assignment ID")
+	ErrAssignmentReportTooLong       = errors.New("assignment report is too long")
 ) 

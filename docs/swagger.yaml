@@ -34,6 +34,33 @@ definitions:
     - name
     - quantity
     type: object
+  models.CreateTaskRequest:
+    properties:
+      end_time:
+        example: "2024-07-05T00:00:00Z"
+        type: string
+      note:
+        example: Annual company-wide retreat
+        type: string
+      priority:
+        example: medium
+        type: string
+      start_time:
+        example: "2024-07-01T00:00:00Z"
+        type: string
+      status:
+        example: pending
+        type: string
+      sub_tasks:
+        items:
+          $ref: '#/definitions/models.SubTaskRequest'
+        type: array
+      task_name:
+        example: Organize Company Retreat
+        type: string
+    required:
+    - task_name
+    type: object
   models.CreateTaskTypeRequest:
     properties:
       description:
@@ -131,6 +158,89 @@ definitions:
         example: "2023-01-01T00:00:00Z"
         type: string
     type: object
+  models.SubTask:
+    properties:
+      assignments:
+        items:
+          $ref: '#/definitions/models.UserSubTaskAssignment'
+        type: array
+      created_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      description:
+        example: Book the venue for the retreat
+        type: string
+      estimate_effort:
+        example: 8
+        type: integer
+      id:
+        example: 105
+        type: integer
+      status:
+        example: pending
+        type: string
+      sub_task_name:
+        example: Venue Booking Sub-Task
+        type: string
+      task_id:
+        example: 3
+        type: integer
+      type_id:
+        example: 10
+        type: integer
+      updated_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+    type: object
+  models.SubTaskRequest:
+    properties:
+      type_id:
+        example: 10
+        type: integer
+      user_ids:
+        example:
+        - 3
+        - 7
+        items:
+          type: integer
+        type: array
+    required:
+    - type_id
+    type: object
+  models.Task:
+    properties:
+      created_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      end_time:
+        example: "2024-07-05T00:00:00Z"
+        type: string
+      id:
+        example: 1
+        type: integer
+      note:
+        example: Annual company-wide retreat
+        type: string
+      priority:
+        example: high
+        type: string
+      start_time:
+        example: "2024-07-01T00:00:00Z"
+        type: string
+      status:
+        example: pending
+        type: string
+      sub_tasks:
+        items:
+          $ref: '#/definitions/models.SubTask'
+        type: array
+      task_name:
+        example: Organize Company Retreat
+        type: string
+      updated_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+    type: object
   models.TaskType:
     properties:
       created_at:
@@ -185,6 +295,27 @@ definitions:
       task_type_id:
         example: 2
         type: integer
+    type: object
+  models.UpdateTaskRequest:
+    properties:
+      end_time:
+        example: "2024-07-05T00:00:00Z"
+        type: string
+      note:
+        example: Updated note
+        type: string
+      priority:
+        example: high
+        type: string
+      start_time:
+        example: "2024-07-01T00:00:00Z"
+        type: string
+      status:
+        example: in-progress
+        type: string
+      task_name:
+        example: Updated Task Name
+        type: string
     type: object
   models.UpdateTaskTypeRequest:
     properties:
@@ -256,6 +387,29 @@ definitions:
       user_name:
         example: John Doe
         type: string
+    type: object
+  models.UserSubTaskAssignment:
+    properties:
+      assigned_at:
+        example: "2023-01-01T12:00:00Z"
+        type: string
+      assignment_id:
+        example: 201
+        type: integer
+      report:
+        example: Task assigned to implement the UI
+        type: string
+      sub_task_id:
+        example: 105
+        type: integer
+      updated_at:
+        example: "2023-01-01T12:00:00Z"
+        type: string
+      user_details:
+        $ref: '#/definitions/models.UserBasic'
+      user_id:
+        example: 3
+        type: integer
     type: object
   models.UserTaskAssignmentRequest:
     properties:
@@ -692,6 +846,171 @@ paths:
       summary: Update a task type
       tags:
       - task-types
+  /api/v1/tasks:
+    get:
+      description: Get a list of all tasks
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of tasks
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.Task'
+                  type: array
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Get all tasks
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      description: Create a new task with optional sub-tasks and user assignments
+      parameters:
+      - description: Task creation data with sub-tasks and assignments
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Task created successfully with sub-tasks and assignments
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Task'
+              type: object
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Create a new task with sub-tasks and assignments
+      tags:
+      - tasks
+  /api/v1/tasks/{id}:
+    delete:
+      description: Delete an existing task by ID
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: Task deleted successfully
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "400":
+          description: Invalid task ID
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "404":
+          description: Task not found
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Delete a task
+      tags:
+      - tasks
+    get:
+      description: Get a single task by its ID with associated sub-tasks and assignments
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task details with sub-tasks and assignments
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Task'
+              type: object
+        "400":
+          description: Invalid task ID
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "404":
+          description: Task not found
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Get task by ID
+      tags:
+      - tasks
+    put:
+      consumes:
+      - application/json
+      description: Update an existing task by ID
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Task update data
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task updated successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Task'
+              type: object
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "404":
+          description: Task not found
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Update a task
+      tags:
+      - tasks
   /api/v1/user/{id}:
     put:
       consumes:

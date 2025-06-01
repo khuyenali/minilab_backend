@@ -10,15 +10,17 @@ type Handler struct {
 	roleService     service.RoleService
 	taskTypeService service.TaskTypeService
 	machineService  service.MachineService
+	taskService     service.TaskService
 }
 
 // NewHandler creates a new handler instance
-func NewHandler(userService service.UserService, roleService service.RoleService, taskTypeService service.TaskTypeService, machineService service.MachineService) *Handler {
+func NewHandler(userService service.UserService, roleService service.RoleService, taskTypeService service.TaskTypeService, machineService service.MachineService, taskService service.TaskService) *Handler {
 	return &Handler{
 		userService:     userService,
 		roleService:     roleService,
 		taskTypeService: taskTypeService,
 		machineService:  machineService,
+		taskService:     taskService,
 	}
 }
 

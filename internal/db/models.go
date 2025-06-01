@@ -6,7 +6,53 @@ package db
 
 import (
 	"database/sql"
+	"database/sql/driver"
+	"fmt"
 )
+
+type TaskStatus string
+
+const (
+	TaskStatusDraft      TaskStatus = "draft"
+	TaskStatusPending    TaskStatus = "pending"
+	TaskStatusProcessing TaskStatus = "processing"
+	TaskStatusFinish     TaskStatus = "finish"
+)
+
+func (e *TaskStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TaskStatus(s)
+	case string:
+		*e = TaskStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TaskStatus: %T", src)
+	}
+	return nil
+}
+
+type NullTaskStatus struct {
+	TaskStatus TaskStatus
+	Valid      bool // Valid is true if TaskStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTaskStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.TaskStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TaskStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTaskStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TaskStatus), nil
+}
 
 type Machine struct {
 	ID           int32
@@ -21,6 +67,29 @@ type Machine struct {
 type Role struct {
 	ID        int32
 	RoleName  string
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+}
+
+type SubTask struct {
+	ID             int32
+	TaskID         int32
+	TypeID         int32
+	SubTaskName    sql.NullString
+	Description    sql.NullString
+	EstimateEffort sql.NullInt32
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
+}
+
+type Task struct {
+	ID        int32
+	TaskName  string
+	Status    TaskStatus
+	Priority  int32
+	StartTime sql.NullTime
+	EndTime   sql.NullTime
+	Note      sql.NullString
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime
 }
@@ -40,6 +109,15 @@ type User struct {
 	RoleID    int32
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime
+}
+
+type UserToSubTask struct {
+	ID         int32
+	UserID     int32
+	SubTaskID  int32
+	Report     sql.NullString
+	AssignedAt sql.NullTime
+	UpdatedAt  sql.NullTime
 }
 
 type UserToType struct {
