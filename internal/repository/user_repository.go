@@ -18,6 +18,10 @@ type UserRepository interface {
 	Create(ctx context.Context, req models.CreateUserRequest) (*models.User, error)
 	Update(ctx context.Context, id int32, req models.UpdateUserRequest) (*models.User, error)
 	Delete(ctx context.Context, id int32) error
+	GetByIDs(ctx context.Context, ids []int32) ([]*models.User, error)
+	AddUserToTaskType(ctx context.Context, userID int32, taskTypeID int32) error
+	RemoveUserFromTaskType(ctx context.Context, userID int32, taskTypeID int32) error
+	ClearTaskTypeAssignments(ctx context.Context, taskTypeID int32) error
 }
 
 // userRepository implements UserRepository using sqlc generated code
@@ -50,9 +54,9 @@ func (r *userRepository) GetByID(ctx context.Context, id int32) (*models.User, e
 	taskTypeRows, err := r.queries.GetUserTaskTypes(ctx, id)
 	if err != nil {
 		// If we can't get task types, just return user without them
-		user.TaskTypes = []*models.TaskTypeBasic{}
+		user.TaskTypes = []*models.TaskTypeMinimal{}
 	} else {
-		user.TaskTypes = models.FromGetUserTaskTypesRows(taskTypeRows)
+		user.TaskTypes = models.FromGetUserTaskTypesRowsMinimal(taskTypeRows)
 	}
 	
 	return user, nil
@@ -74,9 +78,9 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*models.
 	taskTypeRows, err := r.queries.GetUserTaskTypes(ctx, user.ID)
 	if err != nil {
 		// If we can't get task types, just return user without them
-		user.TaskTypes = []*models.TaskTypeBasic{}
+		user.TaskTypes = []*models.TaskTypeMinimal{}
 	} else {
-		user.TaskTypes = models.FromGetUserTaskTypesRows(taskTypeRows)
+		user.TaskTypes = models.FromGetUserTaskTypesRowsMinimal(taskTypeRows)
 	}
 	
 	return user, nil
@@ -107,9 +111,9 @@ func (r *userRepository) List(ctx context.Context, filters models.UserFilters) (
 		taskTypeRows, err := r.queries.GetUserTaskTypes(ctx, user.ID)
 		if err != nil {
 			// If we can't get task types, just set empty array
-			user.TaskTypes = []*models.TaskTypeBasic{}
+			user.TaskTypes = []*models.TaskTypeMinimal{}
 		} else {
-			user.TaskTypes = models.FromGetUserTaskTypesRows(taskTypeRows)
+			user.TaskTypes = models.FromGetUserTaskTypesRowsMinimal(taskTypeRows)
 		}
 	}
 	
@@ -248,4 +252,38 @@ func (r *userRepository) Delete(ctx context.Context, id int32) error {
 	}
 	
 	return r.queries.DeleteUser(ctx, id)
+}
+
+// GetByIDs retrieves users by multiple IDs
+func (r *userRepository) GetByIDs(ctx context.Context, ids []int32) ([]*models.User, error) {
+	users := []*models.User{}
+	for _, id := range ids {
+		user, err := r.GetByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	return users, nil
+}
+
+// AddUserToTaskType adds a user to a task type
+func (r *userRepository) AddUserToTaskType(ctx context.Context, userID int32, taskTypeID int32) error {
+	return r.queries.AddUserTaskType(ctx, db.AddUserTaskTypeParams{
+		UserID: userID,
+		TypeID: taskTypeID,
+	})
+}
+
+// RemoveUserFromTaskType removes a user from a task type
+func (r *userRepository) RemoveUserFromTaskType(ctx context.Context, userID int32, taskTypeID int32) error {
+	return r.queries.RemoveUserTaskType(ctx, db.RemoveUserTaskTypeParams{
+		UserID: userID,
+		TypeID: taskTypeID,
+	})
+}
+
+// ClearTaskTypeAssignments clears all task type assignments for a user
+func (r *userRepository) ClearTaskTypeAssignments(ctx context.Context, taskTypeID int32) error {
+	return r.queries.RemoveAllTaskTypeUsers(ctx, taskTypeID)
 } 

@@ -10,4 +10,5 @@ var (
 	ErrTaskTypeNotFound = errors.New("task type not found")
 	ErrMachineNotFound  = errors.New("machine not found")
 	ErrInvalidMachineIDs = errors.New("one or more machine IDs are invalid")
+	ErrInvalidUserIDs    = errors.New("one or more user IDs are invalid")
 ) 

@@ -19,21 +19,26 @@ type TaskTypeRepository interface {
 	ValidateMachineIDs(ctx context.Context, machineIDs []int32) error
 	AssignMachinesToTaskType(ctx context.Context, machineIDs []int32, taskTypeID int32) error
 	ClearMachineAssignments(ctx context.Context, taskTypeID int32) error
+	ValidateUserIDs(ctx context.Context, userIDs []int32) error
+	AssignUsersToTaskType(ctx context.Context, userIDs []int32, taskTypeID int32) error
+	ClearUserAssignments(ctx context.Context, taskTypeID int32) error
 }
 
 // taskTypeRepository implements TaskTypeRepository using sqlc generated code
 type taskTypeRepository struct {
-	db        *sql.DB
-	queries   *db.Queries
+	db          *sql.DB
+	queries     *db.Queries
 	machineRepo MachineRepository
+	userRepo    UserRepository
 }
 
 // NewTaskTypeRepository creates a new task type repository
-func NewTaskTypeRepository(database *sql.DB, machineRepo MachineRepository) TaskTypeRepository {
+func NewTaskTypeRepository(database *sql.DB, machineRepo MachineRepository, userRepo UserRepository) TaskTypeRepository {
 	return &taskTypeRepository{
 		db:          database,
 		queries:     db.New(database),
 		machineRepo: machineRepo,
+		userRepo:    userRepo,
 	}
 }
 
@@ -59,7 +64,7 @@ func (r *taskTypeRepository) List(ctx context.Context) ([]*models.TaskType, erro
 	
 	taskTypes := models.FromListTaskTypesRows(rows)
 	
-	// Get machines for each task type
+	// Get machines and users for each task type
 	for _, taskType := range taskTypes {
 		machines, err := r.queries.GetMachinesByTaskType(ctx, sql.NullInt32{Int32: taskType.ID, Valid: true})
 		if err != nil {
@@ -67,6 +72,15 @@ func (r *taskTypeRepository) List(ctx context.Context) ([]*models.TaskType, erro
 			continue
 		}
 		taskType.Machines = models.FromGetMachinesByTaskTypeRows(machines)
+		
+		// Get users
+		users, err := r.queries.GetTaskTypeUsers(ctx, taskType.ID)
+		if err != nil {
+			// Continue if we can't get users, default to empty array
+			taskType.Users = []*models.UserBasic{}
+		} else {
+			taskType.Users = models.FromGetTaskTypeUsersRows(users)
+		}
 	}
 	
 	return taskTypes, nil
@@ -86,6 +100,13 @@ func (r *taskTypeRepository) Create(ctx context.Context, req models.CreateTaskTy
 		}
 	}
 	
+	// Validate user IDs if provided
+	if len(req.UserIDs) > 0 {
+		if err := r.ValidateUserIDs(ctx, req.UserIDs); err != nil {
+			return nil, err
+		}
+	}
+	
 	dbTaskType, err := r.queries.CreateTaskType(ctx, db.CreateTaskTypeParams{
 		TypeName:    req.Name,
 		Description: description,
@@ -98,6 +119,15 @@ func (r *taskTypeRepository) Create(ctx context.Context, req models.CreateTaskTy
 	if len(req.MachineIDs) > 0 {
 		if err := r.AssignMachinesToTaskType(ctx, req.MachineIDs, dbTaskType.ID); err != nil {
 			// If machine assignment fails, we should probably rollback the task type creation
+			// For now, we'll continue but this should be in a transaction
+			return nil, err
+		}
+	}
+	
+	// Assign users if provided
+	if len(req.UserIDs) > 0 {
+		if err := r.AssignUsersToTaskType(ctx, req.UserIDs, dbTaskType.ID); err != nil {
+			// If user assignment fails, we should probably rollback the task type creation
 			// For now, we'll continue but this should be in a transaction
 			return nil, err
 		}
@@ -127,6 +157,13 @@ func (r *taskTypeRepository) Update(ctx context.Context, id int32, req models.Up
 		}
 	}
 	
+	// Validate user IDs if provided
+	if len(req.UserIDs) > 0 {
+		if err := r.ValidateUserIDs(ctx, req.UserIDs); err != nil {
+			return nil, err
+		}
+	}
+	
 	dbTaskType, err := r.queries.UpdateTaskType(ctx, db.UpdateTaskTypeParams{
 		ID:          id,
 		TypeName:    req.Name,
@@ -145,6 +182,19 @@ func (r *taskTypeRepository) Update(ctx context.Context, id int32, req models.Up
 		
 		// Assign new machines
 		if err := r.AssignMachinesToTaskType(ctx, req.MachineIDs, id); err != nil {
+			return nil, err
+		}
+	}
+	
+	// Handle user assignments if provided
+	if len(req.UserIDs) > 0 {
+		// Clear existing assignments first
+		if err := r.ClearUserAssignments(ctx, id); err != nil {
+			return nil, err
+		}
+		
+		// Assign new users
+		if err := r.AssignUsersToTaskType(ctx, req.UserIDs, id); err != nil {
 			return nil, err
 		}
 	}
@@ -178,6 +228,16 @@ func (r *taskTypeRepository) GetWithMachines(ctx context.Context, id int32) (*mo
 	}
 	
 	taskType.Machines = models.FromGetMachinesByTaskTypeRows(machines)
+	
+	// Get users
+	users, err := r.queries.GetTaskTypeUsers(ctx, id)
+	if err != nil {
+		// Default to empty array if we can't get users
+		taskType.Users = []*models.UserBasic{}
+	} else {
+		taskType.Users = models.FromGetTaskTypeUsersRows(users)
+	}
+	
 	return taskType, nil
 }
 
@@ -226,4 +286,51 @@ func (r *taskTypeRepository) AssignMachinesToTaskType(ctx context.Context, machi
 // ClearMachineAssignments clears machine assignments for a task type
 func (r *taskTypeRepository) ClearMachineAssignments(ctx context.Context, taskTypeID int32) error {
 	return r.machineRepo.ClearTaskTypeAssignments(ctx, taskTypeID)
+}
+
+// ValidateUserIDs checks if the provided user IDs are valid
+func (r *taskTypeRepository) ValidateUserIDs(ctx context.Context, userIDs []int32) error {
+	if len(userIDs) == 0 {
+		return nil
+	}
+	
+	users, err := r.userRepo.GetByIDs(ctx, userIDs)
+	if err != nil {
+		return err
+	}
+	
+	// Check if all requested users were found
+	if len(users) != len(userIDs) {
+		// Find which user IDs don't exist
+		foundIDs := make(map[int32]bool)
+		for _, user := range users {
+			foundIDs[user.ID] = true
+		}
+		
+		var missingIDs []int32
+		for _, id := range userIDs {
+			if !foundIDs[id] {
+				missingIDs = append(missingIDs, id)
+			}
+		}
+		
+		return fmt.Errorf("%w: IDs %v not found", ErrInvalidUserIDs, missingIDs)
+	}
+	
+	return nil
+}
+
+// AssignUsersToTaskType assigns users to a task type
+func (r *taskTypeRepository) AssignUsersToTaskType(ctx context.Context, userIDs []int32, taskTypeID int32) error {
+	for _, userID := range userIDs {
+		if err := r.userRepo.AddUserToTaskType(ctx, userID, taskTypeID); err != nil {
+			return fmt.Errorf("failed to assign user %d to task type %d: %w", userID, taskTypeID, err)
+		}
+	}
+	return nil
+}
+
+// ClearUserAssignments clears user assignments for a task type
+func (r *taskTypeRepository) ClearUserAssignments(ctx context.Context, taskTypeID int32) error {
+	return r.userRepo.ClearTaskTypeAssignments(ctx, taskTypeID)
 } 

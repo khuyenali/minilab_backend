@@ -26,6 +26,19 @@ func (q *Queries) AddUserTaskType(ctx context.Context, arg AddUserTaskTypeParams
 	return err
 }
 
+const countTaskTypeUsers = `-- name: CountTaskTypeUsers :one
+SELECT COUNT(*) as user_count
+FROM user_to_type
+WHERE type_id = $1
+`
+
+func (q *Queries) CountTaskTypeUsers(ctx context.Context, typeID int32) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countTaskTypeUsers, typeID)
+	var user_count int64
+	err := row.Scan(&user_count)
+	return user_count, err
+}
+
 const getTaskTypeUsers = `-- name: GetTaskTypeUsers :many
 SELECT ut.user_id, ut.type_id, u.name, u.email, u.role_id, r.role_name, ut.created_at
 FROM user_to_type ut
@@ -123,6 +136,16 @@ func (q *Queries) GetUserTaskTypes(ctx context.Context, userID int32) ([]GetUser
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeAllTaskTypeUsers = `-- name: RemoveAllTaskTypeUsers :exec
+DELETE FROM user_to_type
+WHERE type_id = $1
+`
+
+func (q *Queries) RemoveAllTaskTypeUsers(ctx context.Context, typeID int32) error {
+	_, err := q.db.ExecContext(ctx, removeAllTaskTypeUsers, typeID)
+	return err
 }
 
 const removeAllUserTaskTypes = `-- name: RemoveAllUserTaskTypes :exec

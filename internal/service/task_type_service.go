@@ -6,6 +6,7 @@ import (
 	"mini-lab-api/internal/repository"
 	"strings"
 	"errors"
+	"fmt"
 )
 
 // TaskTypeService defines the interface for task type business operations
@@ -20,12 +21,14 @@ type TaskTypeService interface {
 // taskTypeService implements TaskTypeService
 type taskTypeService struct {
 	taskTypeRepo repository.TaskTypeRepository
+	userRepo     repository.UserRepository
 }
 
 // NewTaskTypeService creates a new task type service
-func NewTaskTypeService(taskTypeRepo repository.TaskTypeRepository) TaskTypeService {
+func NewTaskTypeService(taskTypeRepo repository.TaskTypeRepository, userRepo repository.UserRepository) TaskTypeService {
 	return &taskTypeService{
 		taskTypeRepo: taskTypeRepo,
+		userRepo:     userRepo,
 	}
 }
 
@@ -58,6 +61,13 @@ func (s *taskTypeService) CreateTaskType(ctx context.Context, req models.CreateT
 		return nil, err
 	}
 	
+	// Validate user IDs if provided
+	if len(req.UserIDs) > 0 {
+		if err := s.validateUserIDs(ctx, req.UserIDs); err != nil {
+			return nil, err
+		}
+	}
+	
 	taskType, err := s.taskTypeRepo.Create(ctx, req)
 	if err != nil {
 		// Check for machine validation errors
@@ -79,6 +89,13 @@ func (s *taskTypeService) UpdateTaskType(ctx context.Context, id int32, req mode
 	// Validate input
 	if err := s.validateUpdateTaskTypeRequest(req); err != nil {
 		return nil, err
+	}
+	
+	// Validate user IDs if provided
+	if len(req.UserIDs) > 0 {
+		if err := s.validateUserIDs(ctx, req.UserIDs); err != nil {
+			return nil, err
+		}
 	}
 	
 	taskType, err := s.taskTypeRepo.Update(ctx, id, req)
@@ -142,6 +159,44 @@ func (s *taskTypeService) validateUpdateTaskTypeRequest(req models.UpdateTaskTyp
 	
 	if req.Description != nil && len(*req.Description) > 1000 {
 		return ErrTaskTypeDescriptionTooLong
+	}
+	
+	return nil
+}
+
+// validateUserIDs checks if the provided user IDs are valid and are members
+func (s *taskTypeService) validateUserIDs(ctx context.Context, userIDs []int32) error {
+	if len(userIDs) == 0 {
+		return nil
+	}
+	
+	// Check each user ID exists and is a member
+	var invalidIDs []int32
+	var nonMemberIDs []int32
+	
+	for _, userID := range userIDs {
+		user, err := s.userRepo.GetByID(ctx, userID)
+		if err != nil {
+			if err == repository.ErrUserNotFound {
+				invalidIDs = append(invalidIDs, userID)
+				continue
+			}
+			return err
+		}
+		
+		// Check if user is a member (role_id = 3)
+		if user.RoleID != 3 {
+			nonMemberIDs = append(nonMemberIDs, userID)
+		}
+	}
+	
+	// Return specific error messages
+	if len(invalidIDs) > 0 {
+		return errors.New("invalid user IDs: " + strings.Trim(strings.Join(strings.Fields(fmt.Sprint(invalidIDs)), ", "), "[]"))
+	}
+	
+	if len(nonMemberIDs) > 0 {
+		return errors.New("only members can be assigned to task types, invalid users: " + strings.Trim(strings.Join(strings.Fields(fmt.Sprint(nonMemberIDs)), ", "), "[]"))
 	}
 	
 	return nil

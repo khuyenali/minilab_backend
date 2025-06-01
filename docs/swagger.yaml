@@ -49,6 +49,14 @@ definitions:
       name:
         example: 3D Printing
         type: string
+      users:
+        example:
+        - 1
+        - 2
+        - 3
+        items:
+          type: integer
+        type: array
     required:
     - name
     type: object
@@ -94,9 +102,6 @@ definitions:
     type: object
   models.MachineBasic:
     properties:
-      created_at:
-        example: "2023-01-01T00:00:00Z"
-        type: string
       estimate_time:
         description: in minutes
         example: 120
@@ -110,9 +115,6 @@ definitions:
       quantity:
         example: 2
         type: integer
-      updated_at:
-        example: "2023-01-01T00:00:00Z"
-        type: string
     type: object
   models.Role:
     properties:
@@ -150,12 +152,13 @@ definitions:
       updated_at:
         example: "2023-01-01T00:00:00Z"
         type: string
+      users:
+        items:
+          $ref: '#/definitions/models.UserBasic'
+        type: array
     type: object
-  models.TaskTypeBasic:
+  models.TaskTypeMinimal:
     properties:
-      created_at:
-        example: "2023-01-01T00:00:00Z"
-        type: string
       description:
         example: 3D printing services
         type: string
@@ -164,9 +167,6 @@ definitions:
         type: integer
       name:
         example: 3D Printing
-        type: string
-      updated_at:
-        example: "2023-01-01T00:00:00Z"
         type: string
     type: object
   models.UpdateMachineRequest:
@@ -202,6 +202,14 @@ definitions:
       name:
         example: 3D Printing Updated
         type: string
+      users:
+        example:
+        - 1
+        - 2
+        - 3
+        items:
+          type: integer
+        type: array
     type: object
   models.UpdateUserRequest:
     properties:
@@ -234,10 +242,19 @@ definitions:
         type: string
       task_types:
         items:
-          $ref: '#/definitions/models.TaskTypeBasic'
+          $ref: '#/definitions/models.TaskTypeMinimal'
         type: array
       updated_at:
         example: "2023-01-01T00:00:00Z"
+        type: string
+    type: object
+  models.UserBasic:
+    properties:
+      user_id:
+        example: 1
+        type: integer
+      user_name:
+        example: John Doe
         type: string
     type: object
   models.UserTaskAssignmentRequest:

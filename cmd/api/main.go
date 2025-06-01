@@ -73,13 +73,13 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
 	machineRepo := repository.NewMachineRepository(db)
-	taskTypeRepo := repository.NewTaskTypeRepository(db, machineRepo)
+	taskTypeRepo := repository.NewTaskTypeRepository(db, machineRepo, userRepo)
 	userToTypeRepo := repository.NewUserToTypeRepository(db)
 
 	// Initialize service layer
 	userService := service.NewUserService(userRepo, userToTypeRepo, taskTypeRepo)
 	roleService := service.NewRoleService(roleRepo)
-	taskTypeService := service.NewTaskTypeService(taskTypeRepo)
+	taskTypeService := service.NewTaskTypeService(taskTypeRepo, userRepo)
 	machineService := service.NewMachineService(machineRepo, taskTypeRepo)
 
 	// Set Gin mode

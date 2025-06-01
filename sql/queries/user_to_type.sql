@@ -18,6 +18,15 @@ WHERE user_id = $1 AND type_id = $2;
 DELETE FROM user_to_type
 WHERE user_id = $1;
 
+-- name: RemoveAllTaskTypeUsers :exec
+DELETE FROM user_to_type
+WHERE type_id = $1;
+
+-- name: CountTaskTypeUsers :one
+SELECT COUNT(*) as user_count
+FROM user_to_type
+WHERE type_id = $1;
+
 -- name: GetTaskTypeUsers :many
 SELECT ut.user_id, ut.type_id, u.name, u.email, u.role_id, r.role_name, ut.created_at
 FROM user_to_type ut

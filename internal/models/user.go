@@ -8,14 +8,14 @@ import (
 
 // User represents a user in the system (domain model)
 type User struct {
-	ID        int32            `json:"id" example:"1"`
-	Name      string           `json:"name" example:"John Doe"`
-	Email     string           `json:"email" example:"john@example.com"`
-	RoleID    int32            `json:"-"` // Internal use only, not exposed in API responses
-	Role      string           `json:"role" example:"member"`
-	TaskTypes []*TaskTypeBasic `json:"task_types"`
-	CreatedAt time.Time        `json:"created_at" example:"2023-01-01T00:00:00Z"`
-	UpdatedAt time.Time        `json:"updated_at" example:"2023-01-01T00:00:00Z"`
+	ID        int32               `json:"id" example:"1"`
+	Name      string              `json:"name" example:"John Doe"`
+	Email     string              `json:"email" example:"john@example.com"`
+	RoleID    int32               `json:"-"` // Internal use only, not exposed in API responses
+	Role      string              `json:"role" example:"member"`
+	TaskTypes []*TaskTypeMinimal  `json:"task_types"`
+	CreatedAt time.Time           `json:"created_at" example:"2023-01-01T00:00:00Z"`
+	UpdatedAt time.Time           `json:"updated_at" example:"2023-01-01T00:00:00Z"`
 }
 
 // Role represents a role in the system (domain model)
@@ -265,6 +265,25 @@ func FromGetUserTaskTypesRows(rows []db.GetUserTaskTypesRow) []*TaskTypeBasic {
 			Description: description,
 			CreatedAt:   createdAt,
 			UpdatedAt:   updatedAt,
+		}
+	}
+	return taskTypes
+}
+
+// FromGetUserTaskTypesRowsMinimal converts user task types query results to minimal domain models (without timestamps)
+func FromGetUserTaskTypesRowsMinimal(rows []db.GetUserTaskTypesRow) []*TaskTypeMinimal {
+	taskTypes := make([]*TaskTypeMinimal, len(rows))
+	for i, row := range rows {
+		var description *string
+		
+		if row.Description.Valid {
+			description = &row.Description.String
+		}
+		
+		taskTypes[i] = &TaskTypeMinimal{
+			ID:          row.TypeID,
+			TypeName:    row.TypeName,
+			Description: description,
 		}
 	}
 	return taskTypes

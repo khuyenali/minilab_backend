@@ -19,12 +19,10 @@ type Machine struct {
 
 // MachineBasic represents a machine without task_type info (for nested contexts)
 type MachineBasic struct {
-	ID           int32     `json:"id" example:"1"`
-	MachineName  string    `json:"name" example:"3D Printer Model X"`
-	Quantity     int32     `json:"quantity" example:"2"`
-	EstimateTime int32     `json:"estimate_time" example:"120"` // in minutes
-	CreatedAt    time.Time `json:"created_at" example:"2023-01-01T00:00:00Z"`
-	UpdatedAt    time.Time `json:"updated_at" example:"2023-01-01T00:00:00Z"`
+	ID           int32  `json:"id" example:"1"`
+	MachineName  string `json:"name" example:"3D Printer Model X"`
+	Quantity     int32  `json:"quantity" example:"2"`
+	EstimateTime int32  `json:"estimate_time" example:"120"` // in minutes
 }
 
 // CreateMachineRequest represents the request to create a new machine
@@ -95,22 +93,11 @@ func FromGetMachineRow(row db.Machine) *Machine {
 
 // FromDBMachineBasic converts database model to basic domain model (without task_type)
 func FromDBMachineBasic(dbMachine db.Machine) *MachineBasic {
-	var createdAt, updatedAt time.Time
-	
-	if dbMachine.CreatedAt.Valid {
-		createdAt = dbMachine.CreatedAt.Time
-	}
-	if dbMachine.UpdatedAt.Valid {
-		updatedAt = dbMachine.UpdatedAt.Time
-	}
-	
 	return &MachineBasic{
 		ID:           dbMachine.ID,
 		MachineName:  dbMachine.MachineName,
 		Quantity:     dbMachine.Quantity,
 		EstimateTime: dbMachine.EstimateTime,
-		CreatedAt:    createdAt,
-		UpdatedAt:    updatedAt,
 	}
 }
 

@@ -1147,6 +1147,17 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "3D Printing"
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "example": [
+                        1,
+                        2,
+                        3
+                    ]
                 }
             }
         },
@@ -1208,10 +1219,6 @@ const docTemplate = `{
         "models.MachineBasic": {
             "type": "object",
             "properties": {
-                "created_at": {
-                    "type": "string",
-                    "example": "2023-01-01T00:00:00Z"
-                },
                 "estimate_time": {
                     "description": "in minutes",
                     "type": "integer",
@@ -1228,10 +1235,6 @@ const docTemplate = `{
                 "quantity": {
                     "type": "integer",
                     "example": 2
-                },
-                "updated_at": {
-                    "type": "string",
-                    "example": "2023-01-01T00:00:00Z"
                 }
             }
         },
@@ -1284,16 +1287,18 @@ const docTemplate = `{
                 "updated_at": {
                     "type": "string",
                     "example": "2023-01-01T00:00:00Z"
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.UserBasic"
+                    }
                 }
             }
         },
-        "models.TaskTypeBasic": {
+        "models.TaskTypeMinimal": {
             "type": "object",
             "properties": {
-                "created_at": {
-                    "type": "string",
-                    "example": "2023-01-01T00:00:00Z"
-                },
                 "description": {
                     "type": "string",
                     "example": "3D printing services"
@@ -1305,10 +1310,6 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "3D Printing"
-                },
-                "updated_at": {
-                    "type": "string",
-                    "example": "2023-01-01T00:00:00Z"
                 }
             }
         },
@@ -1356,6 +1357,17 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "3D Printing Updated"
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "example": [
+                        1,
+                        2,
+                        3
+                    ]
                 }
             }
         },
@@ -1402,12 +1414,25 @@ const docTemplate = `{
                 "task_types": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.TaskTypeBasic"
+                        "$ref": "#/definitions/models.TaskTypeMinimal"
                     }
                 },
                 "updated_at": {
                     "type": "string",
                     "example": "2023-01-01T00:00:00Z"
+                }
+            }
+        },
+        "models.UserBasic": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "user_name": {
+                    "type": "string",
+                    "example": "John Doe"
                 }
             }
         },
