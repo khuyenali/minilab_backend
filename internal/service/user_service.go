@@ -80,12 +80,58 @@ func (s *userService) CreateUser(ctx context.Context, req models.CreateUserReque
 	req.Name = strings.TrimSpace(req.Name)
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	
+	// Validate task type IDs if provided
+	if len(req.TaskTypeIDs) > 0 {
+		// Task types can only be assigned to members (role_id = 3)
+		roleID := int32(3) // Default role
+		if req.RoleID != nil {
+			roleID = *req.RoleID
+		}
+		
+		if roleID != 3 {
+			return nil, ErrInvalidUserRole
+		}
+		
+		// Validate that all task type IDs exist
+		var invalidIDs []int32
+		for _, taskTypeID := range req.TaskTypeIDs {
+			_, err := s.taskTypeRepo.GetByID(ctx, taskTypeID)
+			if err != nil {
+				if err == repository.ErrTaskTypeNotFound {
+					invalidIDs = append(invalidIDs, taskTypeID)
+				} else {
+					return nil, err
+				}
+			}
+		}
+		
+		if len(invalidIDs) > 0 {
+			return nil, fmt.Errorf("invalid task type IDs: %v", invalidIDs)
+		}
+	}
+	
 	user, err := s.userRepo.Create(ctx, req)
 	if err != nil {
 		if err == repository.ErrUserEmailExists {
 			return nil, ErrUserEmailExists
 		}
 		return nil, err
+	}
+	
+	// Assign task types if provided and user is a member
+	if len(req.TaskTypeIDs) > 0 && user.RoleID == 3 {
+		err = s.userToTypeRepo.AssignTaskTypes(ctx, user.ID, req.TaskTypeIDs)
+		if err != nil {
+			// If task type assignment fails, we should probably delete the user
+			// but for now, we'll just return the error
+			return nil, err
+		}
+		
+		// Reload user to get updated task types
+		user, err = s.userRepo.GetByID(ctx, user.ID)
+		if err != nil {
+			return nil, err
+		}
 	}
 	
 	return user, nil

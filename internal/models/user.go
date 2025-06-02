@@ -28,9 +28,10 @@ type Role struct {
 
 // CreateUserRequest represents the request to create a new user
 type CreateUserRequest struct {
-	Name   string `json:"name" binding:"required" example:"John Doe"`
-	Email  string `json:"email" binding:"required,email" example:"john@example.com"`
-	RoleID *int32 `json:"role_id" example:"3"`
+	Name        string  `json:"name" binding:"required" example:"John Doe"`
+	Email       string  `json:"email" binding:"required,email" example:"john@example.com"`
+	RoleID      *int32  `json:"role_id" example:"3"`
+	TaskTypeIDs []int32 `json:"task_type_ids,omitempty" swaggertype:"array,integer" example:"1,2,3"`
 }
 
 // UpdateUserRequest represents the request to update a user

@@ -98,6 +98,14 @@ definitions:
       role_id:
         example: 3
         type: integer
+      task_type_ids:
+        example:
+        - 1
+        - 2
+        - 3
+        items:
+          type: integer
+        type: array
     required:
     - email
     - name

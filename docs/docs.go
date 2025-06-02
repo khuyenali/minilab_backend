@@ -1608,6 +1608,17 @@ const docTemplate = `{
                 "role_id": {
                     "type": "integer",
                     "example": 3
+                },
+                "task_type_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "example": [
+                        1,
+                        2,
+                        3
+                    ]
                 }
             }
         },

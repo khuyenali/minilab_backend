@@ -185,6 +185,26 @@ func (h *Handler) CreateUser(c *gin.Context) {
 			return
 		}
 
+		// Handle role validation error
+		if err == service.ErrInvalidUserRole {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid user role",
+				"status":  "error",
+				"message": "Only members can be assigned task types",
+			})
+			return
+		}
+
+		// Check for invalid task type IDs error
+		if strings.Contains(err.Error(), "invalid task type IDs:") {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid task type IDs",
+				"status":  "error",
+				"message": err.Error(),
+			})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to create user",
 			"status":  "error",
