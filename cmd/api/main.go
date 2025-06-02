@@ -160,6 +160,7 @@ func main() {
 			tasks.POST("", h.CreateTask)
 			tasks.GET("/:id", h.GetTask)
 			tasks.PUT("/:id", h.UpdateTask)
+			tasks.PUT("/:id/status", h.UpdateTaskStatusToPending)
 			tasks.DELETE("/:id", h.DeleteTask)
 		}
 		

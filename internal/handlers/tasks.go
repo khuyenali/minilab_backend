@@ -223,6 +223,73 @@ func (h *Handler) UpdateTask(c *gin.Context) {
 	})
 }
 
+// UpdateTaskStatusToPending handles PUT /tasks/:id/status
+// @Summary Update task status from draft to pending
+// @Description Update a task's status from draft to pending
+// @Tags tasks
+// @Produce json
+// @Param id path int true "Task ID"
+// @Success 200 {object} ApiResponse{data=models.Task} "Task status updated successfully"
+// @Failure 400 {object} ApiResponse "Invalid task ID or status transition"
+// @Failure 404 {object} ApiResponse "Task not found"
+// @Failure 500 {object} ApiResponse "Internal server error"
+// @Router /api/v1/tasks/{id}/status [put]
+func (h *Handler) UpdateTaskStatusToPending(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.ParseInt(idParam, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid task ID",
+			"status":  "error",
+			"message": "Task ID must be a number",
+		})
+		return
+	}
+
+	task, err := h.taskService.UpdateTaskStatusToPending(c.Request.Context(), int32(id))
+	if err != nil {
+		if err == service.ErrTaskNotFound {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":   "Task not found",
+				"status":  "error",
+				"message": "Task with the specified ID does not exist",
+			})
+			return
+		}
+
+		if err == service.ErrInvalidTaskID {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid task ID",
+				"status":  "error",
+				"message": err.Error(),
+			})
+			return
+		}
+
+		if err == service.ErrInvalidTaskStatusTransition {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid status transition",
+				"status":  "error",
+				"message": "Task must be in draft status to be updated to pending",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to update task status",
+			"status":  "error",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":    task,
+		"status":  "success",
+		"message": "Task status updated to pending successfully",
+	})
+}
+
 // DeleteTask handles DELETE /tasks/:id
 // @Summary Delete a task
 // @Description Delete an existing task by ID

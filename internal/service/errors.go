@@ -51,6 +51,7 @@ var (
 	ErrTaskNoteTooLong               = errors.New("task note is too long")
 	ErrInvalidTaskStatus             = errors.New("invalid task status")
 	ErrInvalidTaskPriority           = errors.New("invalid task priority")
+	ErrInvalidTaskStatusTransition   = errors.New("invalid task status transition")
 	
 	// Sub-task errors
 	ErrSubTaskNotFound               = errors.New("sub-task not found")

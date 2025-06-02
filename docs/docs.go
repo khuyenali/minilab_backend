@@ -811,7 +811,7 @@ const docTemplate = `{
         },
         "/api/v1/tasks": {
             "get": {
-                "description": "Get a list of all tasks",
+                "description": "Get a list of all tasks with sub-tasks containing their assignments",
                 "produces": [
                     "application/json"
                 ],
@@ -821,7 +821,7 @@ const docTemplate = `{
                 "summary": "Get all tasks",
                 "responses": {
                     "200": {
-                        "description": "List of tasks",
+                        "description": "List of tasks with sub-tasks and their assignments",
                         "schema": {
                             "allOf": [
                                 {
@@ -1057,6 +1057,65 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid task ID",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Task not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/tasks/{id}/status": {
+            "put": {
+                "description": "Update a task's status from draft to pending",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Update task status from draft to pending",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task status updated successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ApiResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Task"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid task ID or status transition",
                         "schema": {
                             "$ref": "#/definitions/handlers.ApiResponse"
                         }

@@ -15,6 +15,7 @@ type TaskService interface {
 	GetTask(ctx context.Context, id int32) (*models.Task, error)
 	CreateTask(ctx context.Context, req models.CreateTaskRequest) (*models.Task, error)
 	UpdateTask(ctx context.Context, id int32, req models.UpdateTaskRequest) (*models.Task, error)
+	UpdateTaskStatusToPending(ctx context.Context, id int32) (*models.Task, error)
 	DeleteTask(ctx context.Context, id int32) error
 }
 
@@ -94,6 +95,45 @@ func (s *taskService) UpdateTask(ctx context.Context, id int32, req models.Updat
 		if err == repository.ErrTaskNotFound {
 			return nil, ErrTaskNotFound
 		}
+		return nil, err
+	}
+	
+	return task, nil
+}
+
+// UpdateTaskStatusToPending updates a task's status from draft to pending
+func (s *taskService) UpdateTaskStatusToPending(ctx context.Context, id int32) (*models.Task, error) {
+	if id <= 0 {
+		return nil, ErrInvalidTaskID
+	}
+	
+	// Get current task to check status
+	currentTask, err := s.taskRepo.GetByID(ctx, id)
+	if err != nil {
+		if err == repository.ErrTaskNotFound {
+			return nil, ErrTaskNotFound
+		}
+		return nil, err
+	}
+	
+	// Check if task is currently in draft status
+	if currentTask.Status != "draft" {
+		return nil, ErrInvalidTaskStatusTransition
+	}
+	
+	// Create update request to change status to pending
+	updateReq := models.UpdateTaskRequest{
+		TaskName:  currentTask.TaskName,
+		Status:    "pending",
+		Priority:  currentTask.Priority,
+		StartTime: currentTask.StartTime,
+		EndTime:   currentTask.EndTime,
+		Note:      currentTask.Note,
+	}
+	
+	// Update the task
+	task, err := s.taskRepo.Update(ctx, id, updateReq)
+	if err != nil {
 		return nil, err
 	}
 	
