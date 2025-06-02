@@ -36,7 +36,7 @@ func NewTaskService(taskRepo repository.TaskRepository, taskTypeRepo repository.
 
 // GetTasks retrieves all tasks
 func (s *taskService) GetTasks(ctx context.Context) ([]*models.Task, error) {
-	return s.taskRepo.List(ctx)
+	return s.taskRepo.ListWithSubTasks(ctx)
 }
 
 // GetTask retrieves a task by ID with sub-tasks and assignments

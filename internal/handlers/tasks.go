@@ -11,10 +11,10 @@ import (
 
 // GetTasks handles GET /tasks
 // @Summary Get all tasks
-// @Description Get a list of all tasks
+// @Description Get a list of all tasks with sub-tasks containing their assignments
 // @Tags tasks
 // @Produce json
-// @Success 200 {object} ApiResponse{data=[]models.Task} "List of tasks"
+// @Success 200 {object} ApiResponse{data=[]models.Task} "List of tasks with sub-tasks and their assignments"
 // @Failure 500 {object} ApiResponse "Internal server error"
 // @Router /api/v1/tasks [get]
 func (h *Handler) GetTasks(c *gin.Context) {

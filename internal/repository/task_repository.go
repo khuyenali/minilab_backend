@@ -11,6 +11,7 @@ import (
 type TaskRepository interface {
 	GetByID(ctx context.Context, id int32) (*models.Task, error)
 	List(ctx context.Context) ([]*models.Task, error)
+	ListWithSubTasks(ctx context.Context) ([]*models.Task, error)
 	Create(ctx context.Context, req models.CreateTaskRequest) (*models.Task, error)
 	Update(ctx context.Context, id int32, req models.UpdateTaskRequest) (*models.Task, error)
 	Delete(ctx context.Context, id int32) error
@@ -52,6 +53,51 @@ func (r *taskRepository) List(ctx context.Context) ([]*models.Task, error) {
 	}
 	
 	return models.FromDBTasks(rows), nil
+}
+
+// ListWithSubTasks retrieves all tasks with their sub-tasks and assignments
+func (r *taskRepository) ListWithSubTasks(ctx context.Context) ([]*models.Task, error) {
+	// Get all tasks
+	tasks, err := r.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// For each task, get its sub-tasks and assignments
+	for _, task := range tasks {
+		// Get sub-tasks for this task
+		dbSubTasks, err := r.queries.GetSubTasksByTaskID(ctx, task.ID)
+		if err != nil {
+			// Continue if we can't get sub-tasks for this task
+			task.SubTasks = []*models.SubTask{}
+			continue
+		}
+
+		if len(dbSubTasks) > 0 {
+			subTasks := make([]*models.SubTask, 0, len(dbSubTasks))
+			
+			for _, dbSubTask := range dbSubTasks {
+				subTask := models.FromDBSubTask(dbSubTask)
+				
+				// Get assignments for this sub-task
+				dbAssignments, err := r.queries.GetAssignmentsBySubTaskID(ctx, dbSubTask.ID)
+				if err != nil {
+					// Continue if we can't get assignments for this sub-task
+					subTask.Assignments = []*models.UserSubTaskAssignment{}
+				} else {
+					subTask.Assignments = models.FromDBUserSubTaskAssignments(dbAssignments)
+				}
+				
+				subTasks = append(subTasks, subTask)
+			}
+			
+			task.SubTasks = subTasks
+		} else {
+			task.SubTasks = []*models.SubTask{}
+		}
+	}
+
+	return tasks, nil
 }
 
 // Create creates a new task with sub-tasks and assignments in a transaction
