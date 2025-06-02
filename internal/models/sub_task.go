@@ -65,6 +65,12 @@ type FinishAssignmentRequest struct {
 	Report string `json:"report" binding:"required" example:"Task completed successfully"`
 }
 
+// CreateAssignmentRequest represents the request to create a new assignment
+type CreateAssignmentRequest struct {
+	SubTaskID int32 `json:"sub_task_id" binding:"required" example:"105"`
+	UserID    int32 `json:"user_id" binding:"required" example:"3"`
+}
+
 // FromDBSubTask converts database model to domain model
 func FromDBSubTask(dbSubTask db.SubTask) *SubTask {
 	var subTaskName, description *string

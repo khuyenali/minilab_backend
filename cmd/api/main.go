@@ -167,8 +167,10 @@ func main() {
 		// Assignment routes
 		assignments := api.Group("/assignments")
 		{
+			assignments.POST("", h.CreateAssignment)
 			assignments.PUT("/process/:id", h.UpdateAssignmentToProcessing)
 			assignments.PUT("/finish/:id", h.FinishAssignment)
+			assignments.DELETE("/:id", h.DeleteAssignment)
 		}
 	}
 

@@ -13,6 +13,18 @@ definitions:
         example: success
         type: string
     type: object
+  models.CreateAssignmentRequest:
+    properties:
+      sub_task_id:
+        example: 105
+        type: integer
+      user_id:
+        example: 3
+        type: integer
+    required:
+    - sub_task_id
+    - user_id
+    type: object
   models.CreateMachineRequest:
     properties:
       estimate_time:
@@ -445,6 +457,72 @@ info:
   title: Mini Lab API
   version: "1.0"
 paths:
+  /api/v1/assignments:
+    post:
+      consumes:
+      - application/json
+      description: Create a new assignment for a user to a sub-task
+      parameters:
+      - description: Assignment creation data
+        in: body
+        name: assignment
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateAssignmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Assignment created successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.UserSubTaskAssignment'
+              type: object
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Create a new assignment
+      tags:
+      - assignments
+  /api/v1/assignments/{id}:
+    delete:
+      description: Delete an assignment by ID
+      parameters:
+      - description: Assignment ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Assignment deleted successfully
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "400":
+          description: Invalid assignment ID
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "404":
+          description: Assignment not found
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Delete an assignment
+      tags:
+      - assignments
   /api/v1/assignments/finish/{id}:
     put:
       consumes:
