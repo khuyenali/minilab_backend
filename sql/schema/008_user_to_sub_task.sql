@@ -1,9 +1,13 @@
+-- Assignment status enum type
+CREATE TYPE assignment_status AS ENUM ('pending', 'process', 'finish');
+
 -- User to sub task assignment table schema
 CREATE TABLE user_to_sub_task (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     sub_task_id INTEGER NOT NULL REFERENCES sub_tasks(id) ON DELETE CASCADE,
     report TEXT,
+    status assignment_status DEFAULT 'pending',
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, sub_task_id)

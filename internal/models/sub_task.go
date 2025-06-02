@@ -23,6 +23,7 @@ type UserSubTaskAssignment struct {
 	UserID       int32      `json:"user_id" example:"3"`
 	SubTaskID    int32      `json:"sub_task_id" example:"105"`
 	Report       *string    `json:"report,omitempty" example:"Task assigned to implement the UI"`
+	Status       string     `json:"status" example:"pending"`
 	AssignedAt   time.Time  `json:"assigned_at" example:"2023-01-01T12:00:00Z"`
 	User         *UserBasic `json:"user_details,omitempty"`
 }
@@ -52,6 +53,16 @@ type CreateUserSubTaskAssignmentRequest struct {
 // UpdateUserSubTaskAssignmentRequest represents the request to update an assignment
 type UpdateUserSubTaskAssignmentRequest struct {
 	Report *string `json:"report,omitempty" example:"Progress update: 50% complete"`
+}
+
+// UpdateAssignmentStatusRequest represents the request to update assignment status only
+type UpdateAssignmentStatusRequest struct {
+	// No body needed for processing status update
+}
+
+// FinishAssignmentRequest represents the request to finish an assignment with a report
+type FinishAssignmentRequest struct {
+	Report string `json:"report" binding:"required" example:"Task completed successfully"`
 }
 
 // FromDBSubTask converts database model to domain model
@@ -92,6 +103,7 @@ func FromDBSubTasks(dbSubTasks []db.SubTask) []*SubTask {
 func FromDBUserSubTaskAssignment(dbAssignment db.UserToSubTask) *UserSubTaskAssignment {
 	var assignedAt time.Time
 	var report *string
+	var status string
 	
 	if dbAssignment.AssignedAt.Valid {
 		assignedAt = dbAssignment.AssignedAt.Time
@@ -99,12 +111,18 @@ func FromDBUserSubTaskAssignment(dbAssignment db.UserToSubTask) *UserSubTaskAssi
 	if dbAssignment.Report.Valid {
 		report = &dbAssignment.Report.String
 	}
+	if dbAssignment.Status.Valid {
+		status = string(dbAssignment.Status.AssignmentStatus)
+	} else {
+		status = "pending" // default value
+	}
 	
 	return &UserSubTaskAssignment{
 		AssignmentID: dbAssignment.ID,
 		UserID:       dbAssignment.UserID,
 		SubTaskID:    dbAssignment.SubTaskID,
 		Report:       report,
+		Status:       status,
 		AssignedAt:   assignedAt,
 	}
 }

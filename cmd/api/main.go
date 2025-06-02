@@ -83,6 +83,7 @@ func main() {
 	taskTypeService := service.NewTaskTypeService(taskTypeRepo, userRepo)
 	machineService := service.NewMachineService(machineRepo, taskTypeRepo)
 	taskService := service.NewTaskService(taskRepo, taskTypeRepo, userRepo)
+	assignmentService := service.NewAssignmentService(db, taskRepo)
 
 	// Set Gin mode
 	if cfg.Environment == "production" {
@@ -98,7 +99,7 @@ func main() {
 	r.Use(corsMiddleware())
 
 	// Initialize handlers with dependencies
-	h := handlers.NewHandler(userService, roleService, taskTypeService, machineService, taskService)
+	h := handlers.NewHandler(userService, roleService, taskTypeService, machineService, taskService, assignmentService)
 
 	// Swagger documentation endpoint
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -160,6 +161,13 @@ func main() {
 			tasks.GET("/:id", h.GetTask)
 			tasks.PUT("/:id", h.UpdateTask)
 			tasks.DELETE("/:id", h.DeleteTask)
+		}
+		
+		// Assignment routes
+		assignments := api.Group("/assignments")
+		{
+			assignments.PUT("/process/:id", h.UpdateAssignmentToProcessing)
+			assignments.PUT("/finish/:id", h.FinishAssignment)
 		}
 	}
 

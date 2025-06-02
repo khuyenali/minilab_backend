@@ -24,6 +24,130 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/assignments/finish/{id}": {
+            "put": {
+                "description": "Change assignment status from processing to finish with a required report",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assignments"
+                ],
+                "summary": "Change assignment status from processing to finish with report",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Assignment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Assignment finish data with report",
+                        "name": "assignment",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.FinishAssignmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Assignment status updated to finish successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ApiResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.UserSubTaskAssignment"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid assignment ID, invalid status transition, or missing report",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Assignment not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/assignments/process/{id}": {
+            "put": {
+                "description": "Change assignment status from pending to processing",
+                "tags": [
+                    "assignments"
+                ],
+                "summary": "Change assignment status from pending to processing",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Assignment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Assignment status updated to processing successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ApiResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.UserSubTaskAssignment"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid assignment ID or invalid status transition",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Assignment not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/machine": {
             "get": {
                 "description": "Get a list of all machines",
@@ -784,7 +908,7 @@ const docTemplate = `{
         },
         "/api/v1/tasks/{id}": {
             "get": {
-                "description": "Get a single task by its ID with associated sub-tasks and assignments",
+                "description": "Get a single task by its ID with sub-tasks containing their assignments",
                 "produces": [
                     "application/json"
                 ],
@@ -803,7 +927,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Task details with sub-tasks and assignments",
+                        "description": "Task details with sub-tasks and their assignments",
                         "schema": {
                             "allOf": [
                                 {
@@ -1406,8 +1530,8 @@ const docTemplate = `{
                     "example": "Annual company-wide retreat"
                 },
                 "priority": {
-                    "type": "string",
-                    "example": "medium"
+                    "type": "integer",
+                    "example": 1
                 },
                 "start_time": {
                     "type": "string",
@@ -1415,7 +1539,7 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string",
-                    "example": "pending"
+                    "example": "draft"
                 },
                 "sub_tasks": {
                     "type": "array",
@@ -1484,6 +1608,18 @@ const docTemplate = `{
                 "role_id": {
                     "type": "integer",
                     "example": 3
+                }
+            }
+        },
+        "models.FinishAssignmentRequest": {
+            "type": "object",
+            "required": [
+                "report"
+            ],
+            "properties": {
+                "report": {
+                    "type": "string",
+                    "example": "Task completed successfully"
                 }
             }
         },
@@ -1573,10 +1709,6 @@ const docTemplate = `{
                         "$ref": "#/definitions/models.UserSubTaskAssignment"
                     }
                 },
-                "created_at": {
-                    "type": "string",
-                    "example": "2023-01-01T00:00:00Z"
-                },
                 "description": {
                     "type": "string",
                     "example": "Book the venue for the retreat"
@@ -1589,10 +1721,6 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 105
                 },
-                "status": {
-                    "type": "string",
-                    "example": "pending"
-                },
                 "sub_task_name": {
                     "type": "string",
                     "example": "Venue Booking Sub-Task"
@@ -1604,10 +1732,6 @@ const docTemplate = `{
                 "type_id": {
                     "type": "integer",
                     "example": 10
-                },
-                "updated_at": {
-                    "type": "string",
-                    "example": "2023-01-01T00:00:00Z"
                 }
             }
         },
@@ -1653,8 +1777,8 @@ const docTemplate = `{
                     "example": "Annual company-wide retreat"
                 },
                 "priority": {
-                    "type": "string",
-                    "example": "high"
+                    "type": "integer",
+                    "example": 1
                 },
                 "start_time": {
                     "type": "string",
@@ -1662,7 +1786,7 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string",
-                    "example": "pending"
+                    "example": "draft"
                 },
                 "sub_tasks": {
                     "type": "array",
@@ -1769,8 +1893,8 @@ const docTemplate = `{
                     "example": "Updated note"
                 },
                 "priority": {
-                    "type": "string",
-                    "example": "high"
+                    "type": "integer",
+                    "example": 1
                 },
                 "start_time": {
                     "type": "string",
@@ -1778,7 +1902,7 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string",
-                    "example": "in-progress"
+                    "example": "processing"
                 },
                 "task_name": {
                     "type": "string",
@@ -1901,13 +2025,13 @@ const docTemplate = `{
                     "type": "string",
                     "example": "Task assigned to implement the UI"
                 },
+                "status": {
+                    "type": "string",
+                    "example": "pending"
+                },
                 "sub_task_id": {
                     "type": "integer",
                     "example": 105
-                },
-                "updated_at": {
-                    "type": "string",
-                    "example": "2023-01-01T12:00:00Z"
                 },
                 "user_details": {
                     "$ref": "#/definitions/models.UserBasic"

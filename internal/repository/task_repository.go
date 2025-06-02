@@ -107,6 +107,7 @@ func (r *taskRepository) Create(ctx context.Context, req models.CreateTaskReques
 						UserID:    userID,
 						SubTaskID: dbSubTask.ID,
 						Report:    sql.NullString{}, // Default to null
+						Status:    db.NullAssignmentStatus{AssignmentStatus: db.AssignmentStatusPending, Valid: true}, // Default to pending
 					}
 
 					dbAssignment, err := txQueries.CreateUserSubTaskAssignment(ctx, assignmentParams)

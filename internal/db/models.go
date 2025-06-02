@@ -10,6 +10,49 @@ import (
 	"fmt"
 )
 
+type AssignmentStatus string
+
+const (
+	AssignmentStatusPending AssignmentStatus = "pending"
+	AssignmentStatusProcess AssignmentStatus = "process"
+	AssignmentStatusFinish  AssignmentStatus = "finish"
+)
+
+func (e *AssignmentStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AssignmentStatus(s)
+	case string:
+		*e = AssignmentStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AssignmentStatus: %T", src)
+	}
+	return nil
+}
+
+type NullAssignmentStatus struct {
+	AssignmentStatus AssignmentStatus
+	Valid            bool // Valid is true if AssignmentStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAssignmentStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.AssignmentStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AssignmentStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAssignmentStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AssignmentStatus), nil
+}
+
 type TaskStatus string
 
 const (
@@ -116,6 +159,7 @@ type UserToSubTask struct {
 	UserID     int32
 	SubTaskID  int32
 	Report     sql.NullString
+	Status     NullAssignmentStatus
 	AssignedAt sql.NullTime
 	UpdatedAt  sql.NullTime
 }

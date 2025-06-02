@@ -65,4 +65,7 @@ var (
 	ErrAssignmentNotFound            = errors.New("assignment not found")
 	ErrInvalidAssignmentID           = errors.New("invalid assignment ID")
 	ErrAssignmentReportTooLong       = errors.New("assignment report is too long")
+	ErrAssignmentReportRequired      = errors.New("assignment report is required")
+	ErrAssignmentNotInPendingStatus  = errors.New("assignment must be in pending status to move to processing")
+	ErrAssignmentNotInProcessingStatus = errors.New("assignment must be in processing status to move to finish")
 ) 
