@@ -82,130 +82,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/assignments/finish/{id}": {
-            "put": {
-                "description": "Change assignment status from processing to finish with a required report",
-                "consumes": [
-                    "application/json"
-                ],
-                "tags": [
-                    "assignments"
-                ],
-                "summary": "Change assignment status from processing to finish with report",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Assignment ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Assignment finish data with report",
-                        "name": "assignment",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.FinishAssignmentRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Assignment status updated to finish successfully",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/handlers.ApiResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/models.UserSubTaskAssignment"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid assignment ID, invalid status transition, or missing report",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ApiResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Assignment not found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ApiResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ApiResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/assignments/process/{id}": {
-            "put": {
-                "description": "Change assignment status from pending to processing",
-                "tags": [
-                    "assignments"
-                ],
-                "summary": "Change assignment status from pending to processing",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Assignment ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Assignment status updated to processing successfully",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/handlers.ApiResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/models.UserSubTaskAssignment"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid assignment ID or invalid status transition",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ApiResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Assignment not found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ApiResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ApiResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/assignments/{id}": {
             "delete": {
                 "description": "Delete an assignment by ID",
@@ -1013,7 +889,7 @@ const docTemplate = `{
         },
         "/api/v1/tasks/available": {
             "get": {
-                "description": "Get draft task IDs available for auto assignment based on priority, user availability constraints (users not already processing assignments), and machine availability. Only tasks with status=\"draft\" are considered. Tasks with pending/process status use machines, finished tasks release machines.",
+                "description": "Get draft task IDs available for auto assignment based on priority, user loading constraints (8 hours max), and machine availability. Only tasks with status=\"draft\" are considered. Tasks with pending/process status use machines, finished tasks release machines.",
                 "produces": [
                     "application/json"
                 ],
@@ -1222,16 +1098,19 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/tasks/{id}/status": {
+        "/api/v1/tasks/{id}/finish": {
             "put": {
-                "description": "Update a task's status from draft to pending",
+                "description": "Finish a task by updating status to 'finish' with a required report",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "tasks"
                 ],
-                "summary": "Update task status from draft to pending",
+                "summary": "Finish a task with a required report",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1239,11 +1118,20 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Task finish data with report",
+                        "name": "task",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.FinishTaskRequest"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Task status updated successfully",
+                        "description": "Task finished successfully",
                         "schema": {
                             "allOf": [
                                 {
@@ -1261,7 +1149,119 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid task ID or status transition",
+                        "description": "Invalid task ID, missing report, or invalid transition",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Task not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/tasks/{id}/pending": {
+            "put": {
+                "description": "Update a task status from draft to pending",
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Update task status to pending",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task status updated to pending successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ApiResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Task"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid task ID or invalid status transition",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Task not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/tasks/{id}/processing": {
+            "put": {
+                "description": "Update a task status from pending to processing",
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Update task status to processing",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task status updated to processing successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ApiResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Task"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid task ID or invalid status transition",
                         "schema": {
                             "$ref": "#/definitions/handlers.ApiResponse"
                         }
@@ -1844,7 +1844,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.FinishAssignmentRequest": {
+        "models.FinishTaskRequest": {
             "type": "object",
             "required": [
                 "report"
@@ -1852,7 +1852,7 @@ const docTemplate = `{
             "properties": {
                 "report": {
                     "type": "string",
-                    "example": "Task completed successfully"
+                    "example": "Task completed successfully with all deliverables met"
                 }
             }
         },
@@ -2012,6 +2012,10 @@ const docTemplate = `{
                 "priority": {
                     "type": "integer",
                     "example": 1
+                },
+                "report": {
+                    "type": "string",
+                    "example": "Task completed successfully with all requirements met"
                 },
                 "start_time": {
                     "type": "string",
@@ -2253,14 +2257,6 @@ const docTemplate = `{
                 "assignment_id": {
                     "type": "integer",
                     "example": 201
-                },
-                "report": {
-                    "type": "string",
-                    "example": "Task assigned to implement the UI"
-                },
-                "status": {
-                    "type": "string",
-                    "example": "pending"
                 },
                 "sub_task_id": {
                     "type": "integer",

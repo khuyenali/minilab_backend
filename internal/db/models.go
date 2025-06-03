@@ -133,6 +133,7 @@ type Task struct {
 	StartTime sql.NullTime
 	EndTime   sql.NullTime
 	Note      sql.NullString
+	Report    sql.NullString
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime
 }
@@ -158,8 +159,6 @@ type UserToSubTask struct {
 	ID         int32
 	UserID     int32
 	SubTaskID  int32
-	Report     sql.NullString
-	Status     NullAssignmentStatus
 	AssignedAt sql.NullTime
 	UpdatedAt  sql.NullTime
 }

@@ -52,6 +52,7 @@ var (
 	ErrInvalidTaskStatus             = errors.New("invalid task status")
 	ErrInvalidTaskPriority           = errors.New("invalid task priority")
 	ErrInvalidTaskStatusTransition   = errors.New("invalid task status transition")
+	ErrTaskReportRequired            = errors.New("task report is required when finishing a task")
 	
 	// Sub-task errors
 	ErrSubTaskNotFound               = errors.New("sub-task not found")
@@ -72,4 +73,5 @@ var (
 	ErrInvalidSubTaskForAssignment   = errors.New("invalid sub-task ID for assignment")
 	ErrInvalidUserForAssignment      = errors.New("invalid user ID for assignment")
 	ErrAssignmentAlreadyExists       = errors.New("assignment already exists for this user and sub-task")
+	ErrInvalidAssignmentStatus       = errors.New("invalid assignment status")
 ) 

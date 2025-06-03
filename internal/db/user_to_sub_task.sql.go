@@ -27,32 +27,23 @@ func (q *Queries) CheckUserHasActiveTasks(ctx context.Context, userID int32) (bo
 }
 
 const createUserSubTaskAssignment = `-- name: CreateUserSubTaskAssignment :one
-INSERT INTO user_to_sub_task (user_id, sub_task_id, report, status)
-VALUES ($1, $2, $3, $4)
-RETURNING id, user_id, sub_task_id, report, status, assigned_at, updated_at
+INSERT INTO user_to_sub_task (user_id, sub_task_id)
+VALUES ($1, $2)
+RETURNING id, user_id, sub_task_id, assigned_at, updated_at
 `
 
 type CreateUserSubTaskAssignmentParams struct {
 	UserID    int32
 	SubTaskID int32
-	Report    sql.NullString
-	Status    NullAssignmentStatus
 }
 
 func (q *Queries) CreateUserSubTaskAssignment(ctx context.Context, arg CreateUserSubTaskAssignmentParams) (UserToSubTask, error) {
-	row := q.db.QueryRowContext(ctx, createUserSubTaskAssignment,
-		arg.UserID,
-		arg.SubTaskID,
-		arg.Report,
-		arg.Status,
-	)
+	row := q.db.QueryRowContext(ctx, createUserSubTaskAssignment, arg.UserID, arg.SubTaskID)
 	var i UserToSubTask
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.SubTaskID,
-		&i.Report,
-		&i.Status,
 		&i.AssignedAt,
 		&i.UpdatedAt,
 	)
@@ -85,9 +76,9 @@ func (q *Queries) DeleteUserSubTaskAssignmentByUserAndSubTask(ctx context.Contex
 }
 
 const getActiveAssignmentsByUserID = `-- name: GetActiveAssignmentsByUserID :many
-SELECT uts.id, uts.user_id, uts.sub_task_id, uts.report, uts.status, uts.assigned_at, uts.updated_at, st.type_id FROM user_to_sub_task uts
+SELECT uts.id, uts.user_id, uts.sub_task_id, uts.assigned_at, uts.updated_at, st.type_id FROM user_to_sub_task uts
 JOIN sub_tasks st ON uts.sub_task_id = st.id
-WHERE uts.user_id = $1 AND uts.status IN ('pending', 'process')
+WHERE uts.user_id = $1
 ORDER BY uts.assigned_at DESC
 `
 
@@ -95,8 +86,6 @@ type GetActiveAssignmentsByUserIDRow struct {
 	ID         int32
 	UserID     int32
 	SubTaskID  int32
-	Report     sql.NullString
-	Status     NullAssignmentStatus
 	AssignedAt sql.NullTime
 	UpdatedAt  sql.NullTime
 	TypeID     int32
@@ -115,8 +104,6 @@ func (q *Queries) GetActiveAssignmentsByUserID(ctx context.Context, userID int32
 			&i.ID,
 			&i.UserID,
 			&i.SubTaskID,
-			&i.Report,
-			&i.Status,
 			&i.AssignedAt,
 			&i.UpdatedAt,
 			&i.TypeID,
@@ -135,7 +122,7 @@ func (q *Queries) GetActiveAssignmentsByUserID(ctx context.Context, userID int32
 }
 
 const getAssignmentsBySubTaskID = `-- name: GetAssignmentsBySubTaskID :many
-SELECT id, user_id, sub_task_id, report, status, assigned_at, updated_at FROM user_to_sub_task
+SELECT id, user_id, sub_task_id, assigned_at, updated_at FROM user_to_sub_task
 WHERE sub_task_id = $1
 ORDER BY assigned_at ASC
 `
@@ -153,8 +140,6 @@ func (q *Queries) GetAssignmentsBySubTaskID(ctx context.Context, subTaskID int32
 			&i.ID,
 			&i.UserID,
 			&i.SubTaskID,
-			&i.Report,
-			&i.Status,
 			&i.AssignedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -172,7 +157,7 @@ func (q *Queries) GetAssignmentsBySubTaskID(ctx context.Context, subTaskID int32
 }
 
 const getAssignmentsByTaskID = `-- name: GetAssignmentsByTaskID :many
-SELECT uts.id, uts.user_id, uts.sub_task_id, uts.report, uts.status, uts.assigned_at, uts.updated_at FROM user_to_sub_task uts
+SELECT uts.id, uts.user_id, uts.sub_task_id, uts.assigned_at, uts.updated_at FROM user_to_sub_task uts
 JOIN sub_tasks st ON uts.sub_task_id = st.id
 WHERE st.task_id = $1
 ORDER BY uts.assigned_at ASC
@@ -191,8 +176,6 @@ func (q *Queries) GetAssignmentsByTaskID(ctx context.Context, taskID int32) ([]U
 			&i.ID,
 			&i.UserID,
 			&i.SubTaskID,
-			&i.Report,
-			&i.Status,
 			&i.AssignedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -210,7 +193,7 @@ func (q *Queries) GetAssignmentsByTaskID(ctx context.Context, taskID int32) ([]U
 }
 
 const getAssignmentsByUserID = `-- name: GetAssignmentsByUserID :many
-SELECT id, user_id, sub_task_id, report, status, assigned_at, updated_at FROM user_to_sub_task
+SELECT id, user_id, sub_task_id, assigned_at, updated_at FROM user_to_sub_task
 WHERE user_id = $1
 ORDER BY assigned_at DESC
 `
@@ -228,8 +211,6 @@ func (q *Queries) GetAssignmentsByUserID(ctx context.Context, userID int32) ([]U
 			&i.ID,
 			&i.UserID,
 			&i.SubTaskID,
-			&i.Report,
-			&i.Status,
 			&i.AssignedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -247,7 +228,7 @@ func (q *Queries) GetAssignmentsByUserID(ctx context.Context, userID int32) ([]U
 }
 
 const getUserSubTaskAssignment = `-- name: GetUserSubTaskAssignment :one
-SELECT id, user_id, sub_task_id, report, status, assigned_at, updated_at FROM user_to_sub_task
+SELECT id, user_id, sub_task_id, assigned_at, updated_at FROM user_to_sub_task
 WHERE id = $1
 `
 
@@ -258,63 +239,6 @@ func (q *Queries) GetUserSubTaskAssignment(ctx context.Context, id int32) (UserT
 		&i.ID,
 		&i.UserID,
 		&i.SubTaskID,
-		&i.Report,
-		&i.Status,
-		&i.AssignedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const updateAssignmentStatus = `-- name: UpdateAssignmentStatus :one
-UPDATE user_to_sub_task
-SET status = $2, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
-RETURNING id, user_id, sub_task_id, report, status, assigned_at, updated_at
-`
-
-type UpdateAssignmentStatusParams struct {
-	ID     int32
-	Status NullAssignmentStatus
-}
-
-func (q *Queries) UpdateAssignmentStatus(ctx context.Context, arg UpdateAssignmentStatusParams) (UserToSubTask, error) {
-	row := q.db.QueryRowContext(ctx, updateAssignmentStatus, arg.ID, arg.Status)
-	var i UserToSubTask
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.SubTaskID,
-		&i.Report,
-		&i.Status,
-		&i.AssignedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const updateAssignmentStatusAndReport = `-- name: UpdateAssignmentStatusAndReport :one
-UPDATE user_to_sub_task
-SET status = $2, report = $3, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
-RETURNING id, user_id, sub_task_id, report, status, assigned_at, updated_at
-`
-
-type UpdateAssignmentStatusAndReportParams struct {
-	ID     int32
-	Status NullAssignmentStatus
-	Report sql.NullString
-}
-
-func (q *Queries) UpdateAssignmentStatusAndReport(ctx context.Context, arg UpdateAssignmentStatusAndReportParams) (UserToSubTask, error) {
-	row := q.db.QueryRowContext(ctx, updateAssignmentStatusAndReport, arg.ID, arg.Status, arg.Report)
-	var i UserToSubTask
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.SubTaskID,
-		&i.Report,
-		&i.Status,
 		&i.AssignedAt,
 		&i.UpdatedAt,
 	)
@@ -323,25 +247,18 @@ func (q *Queries) UpdateAssignmentStatusAndReport(ctx context.Context, arg Updat
 
 const updateUserSubTaskAssignment = `-- name: UpdateUserSubTaskAssignment :one
 UPDATE user_to_sub_task
-SET report = $2, updated_at = CURRENT_TIMESTAMP
+SET updated_at = CURRENT_TIMESTAMP
 WHERE id = $1
-RETURNING id, user_id, sub_task_id, report, status, assigned_at, updated_at
+RETURNING id, user_id, sub_task_id, assigned_at, updated_at
 `
 
-type UpdateUserSubTaskAssignmentParams struct {
-	ID     int32
-	Report sql.NullString
-}
-
-func (q *Queries) UpdateUserSubTaskAssignment(ctx context.Context, arg UpdateUserSubTaskAssignmentParams) (UserToSubTask, error) {
-	row := q.db.QueryRowContext(ctx, updateUserSubTaskAssignment, arg.ID, arg.Report)
+func (q *Queries) UpdateUserSubTaskAssignment(ctx context.Context, id int32) (UserToSubTask, error) {
+	row := q.db.QueryRowContext(ctx, updateUserSubTaskAssignment, id)
 	var i UserToSubTask
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.SubTaskID,
-		&i.Report,
-		&i.Status,
 		&i.AssignedAt,
 		&i.UpdatedAt,
 	)

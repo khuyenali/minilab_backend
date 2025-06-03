@@ -15,7 +15,14 @@ type Handler struct {
 }
 
 // NewHandler creates a new handler instance
-func NewHandler(userService service.UserService, roleService service.RoleService, taskTypeService service.TaskTypeService, machineService service.MachineService, taskService service.TaskService, assignmentService service.AssignmentService) *Handler {
+func NewHandler(
+	userService service.UserService,
+	roleService service.RoleService,
+	taskTypeService service.TaskTypeService,
+	machineService service.MachineService,
+	taskService service.TaskService,
+	assignmentService service.AssignmentService,
+) *Handler {
 	return &Handler{
 		userService:       userService,
 		roleService:       roleService,

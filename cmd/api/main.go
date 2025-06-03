@@ -161,16 +161,16 @@ func main() {
 			tasks.POST("", h.CreateTask)
 			tasks.GET("/:id", h.GetTask)
 			tasks.PUT("/:id", h.UpdateTask)
-			tasks.PUT("/:id/status", h.UpdateTaskStatusToPending)
+			tasks.PUT("/:id/pending", h.UpdateTaskToPending)
+			tasks.PUT("/:id/processing", h.UpdateTaskToProcessing)
+			tasks.PUT("/:id/finish", h.FinishTask)
 			tasks.DELETE("/:id", h.DeleteTask)
 		}
 		
-		// Assignment routes
+		// Assignment routes (simplified)
 		assignments := api.Group("/assignments")
 		{
 			assignments.POST("", h.CreateAssignment)
-			assignments.PUT("/process/:id", h.UpdateAssignmentToProcessing)
-			assignments.PUT("/finish/:id", h.FinishAssignment)
 			assignments.DELETE("/:id", h.DeleteAssignment)
 		}
 	}

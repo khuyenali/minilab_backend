@@ -18,6 +18,8 @@ type TaskService interface {
 	CreateTask(ctx context.Context, req models.CreateTaskRequest) (*models.Task, error)
 	UpdateTask(ctx context.Context, id int32, req models.UpdateTaskRequest) (*models.Task, error)
 	UpdateTaskStatusToPending(ctx context.Context, id int32) (*models.Task, error)
+	UpdateTaskStatus(ctx context.Context, id int32, req models.UpdateTaskStatusRequest) (*models.Task, error)
+	FinishTask(ctx context.Context, id int32, req models.FinishTaskRequest) (*models.Task, error)
 	DeleteTask(ctx context.Context, id int32) error
 	GetAvailableTasks(ctx context.Context) ([]int32, error)
 }
@@ -147,6 +149,120 @@ func (s *taskService) UpdateTaskStatusToPending(ctx context.Context, id int32) (
 	return task, nil
 }
 
+// UpdateTaskStatus updates a task's status
+func (s *taskService) UpdateTaskStatus(ctx context.Context, id int32, req models.UpdateTaskStatusRequest) (*models.Task, error) {
+	if id <= 0 {
+		return nil, ErrInvalidTaskID
+	}
+	
+	// Validate status
+	if !isValidTaskStatus(req.Status) {
+		return nil, ErrInvalidTaskStatus
+	}
+	
+	// Get current task to check status
+	currentTask, err := s.taskRepo.GetByID(ctx, id)
+	if err != nil {
+		if err == repository.ErrTaskNotFound {
+			return nil, ErrTaskNotFound
+		}
+		return nil, err
+	}
+	
+	// Validate status transition
+	if err := s.validateStatusTransition(currentTask.Status, req.Status); err != nil {
+		return nil, err
+	}
+	
+	var dbTask db.Task
+	
+	// If status is finish and no report is provided, return error
+	if req.Status == "finish" && (req.Report == nil || *req.Report == "") {
+		return nil, ErrTaskReportRequired
+	}
+	
+	// Update with or without report
+	if req.Status == "finish" && req.Report != nil {
+		dbTask, err = s.queries.UpdateTaskStatusWithReport(ctx, db.UpdateTaskStatusWithReportParams{
+			ID:     id,
+			Status: db.TaskStatus(req.Status),
+			Report: sql.NullString{String: *req.Report, Valid: true},
+		})
+	} else {
+		dbTask, err = s.queries.UpdateTaskStatus(ctx, db.UpdateTaskStatusParams{
+			ID:     id,
+			Status: db.TaskStatus(req.Status),
+		})
+	}
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	return models.FromDBTask(dbTask), nil
+}
+
+// FinishTask finishes a task with a required report
+func (s *taskService) FinishTask(ctx context.Context, id int32, req models.FinishTaskRequest) (*models.Task, error) {
+	if id <= 0 {
+		return nil, ErrInvalidTaskID
+	}
+	
+	if req.Report == "" {
+		return nil, ErrTaskReportRequired
+	}
+	
+	// Get current task to check status
+	currentTask, err := s.taskRepo.GetByID(ctx, id)
+	if err != nil {
+		if err == repository.ErrTaskNotFound {
+			return nil, ErrTaskNotFound
+		}
+		return nil, err
+	}
+	
+	// Validate status transition to finish
+	if err := s.validateStatusTransition(currentTask.Status, "finish"); err != nil {
+		return nil, err
+	}
+	
+	// Update task status to finish with report
+	dbTask, err := s.queries.UpdateTaskStatusWithReport(ctx, db.UpdateTaskStatusWithReportParams{
+		ID:     id,
+		Status: db.TaskStatusFinish,
+		Report: sql.NullString{String: req.Report, Valid: true},
+	})
+	if err != nil {
+		return nil, err
+	}
+	
+	return models.FromDBTask(dbTask), nil
+}
+
+// validateStatusTransition validates if the status transition is allowed
+func (s *taskService) validateStatusTransition(currentStatus, newStatus string) error {
+	// Define allowed transitions
+	allowedTransitions := map[string][]string{
+		"draft":      {"pending"},
+		"pending":    {"processing"},
+		"processing": {"finish"},
+		"finish":     {}, // No transitions allowed from finish
+	}
+	
+	validTransitions, exists := allowedTransitions[currentStatus]
+	if !exists {
+		return ErrInvalidTaskStatusTransition
+	}
+	
+	for _, validStatus := range validTransitions {
+		if validStatus == newStatus {
+			return nil
+		}
+	}
+	
+	return ErrInvalidTaskStatusTransition
+}
+
 // DeleteTask deletes a task by ID
 func (s *taskService) DeleteTask(ctx context.Context, id int32) error {
 	if id <= 0 {
@@ -234,15 +350,11 @@ func (s *taskService) GetAvailableTasks(ctx context.Context) ([]int32, error) {
 			}
 			
 			// Count assignments that are pending or processing (using machines)
-			for _, assignment := range assignments {
-				status := "pending" // default
-				if assignment.Status.Valid {
-					status = string(assignment.Status.AssignmentStatus)
-				}
-				
-				if status == "pending" || status == "process" {
-					machineUsage[subTask.TypeID]++
-				}
+			for _ = range assignments {
+				// Since assignments no longer have status, we assume all assignments 
+				// for pending/processing tasks are using machines
+				// This is a simplified approach - you can enhance this logic later
+				machineUsage[subTask.TypeID]++
 			}
 		}
 	}

@@ -11,9 +11,9 @@ import (
 )
 
 const createTask = `-- name: CreateTask :one
-INSERT INTO tasks (task_name, status, priority, start_time, end_time, note)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, task_name, status, priority, start_time, end_time, note, created_at, updated_at
+INSERT INTO tasks (task_name, status, priority, start_time, end_time, note, report)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, task_name, status, priority, start_time, end_time, note, report, created_at, updated_at
 `
 
 type CreateTaskParams struct {
@@ -23,6 +23,7 @@ type CreateTaskParams struct {
 	StartTime sql.NullTime
 	EndTime   sql.NullTime
 	Note      sql.NullString
+	Report    sql.NullString
 }
 
 func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error) {
@@ -33,6 +34,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		arg.StartTime,
 		arg.EndTime,
 		arg.Note,
+		arg.Report,
 	)
 	var i Task
 	err := row.Scan(
@@ -43,6 +45,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		&i.StartTime,
 		&i.EndTime,
 		&i.Note,
+		&i.Report,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -60,7 +63,7 @@ func (q *Queries) DeleteTask(ctx context.Context, id int32) error {
 }
 
 const getDraftTasksSortedByPriority = `-- name: GetDraftTasksSortedByPriority :many
-SELECT id, task_name, status, priority, start_time, end_time, note, created_at, updated_at FROM tasks
+SELECT id, task_name, status, priority, start_time, end_time, note, report, created_at, updated_at FROM tasks
 WHERE status = 'draft'
 ORDER BY priority ASC, created_at ASC
 `
@@ -82,6 +85,7 @@ func (q *Queries) GetDraftTasksSortedByPriority(ctx context.Context) ([]Task, er
 			&i.StartTime,
 			&i.EndTime,
 			&i.Note,
+			&i.Report,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -99,7 +103,7 @@ func (q *Queries) GetDraftTasksSortedByPriority(ctx context.Context) ([]Task, er
 }
 
 const getPendingTasksSortedByPriority = `-- name: GetPendingTasksSortedByPriority :many
-SELECT id, task_name, status, priority, start_time, end_time, note, created_at, updated_at FROM tasks
+SELECT id, task_name, status, priority, start_time, end_time, note, report, created_at, updated_at FROM tasks
 WHERE status = 'pending'
 ORDER BY priority ASC, created_at ASC
 `
@@ -121,6 +125,7 @@ func (q *Queries) GetPendingTasksSortedByPriority(ctx context.Context) ([]Task, 
 			&i.StartTime,
 			&i.EndTime,
 			&i.Note,
+			&i.Report,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -138,7 +143,7 @@ func (q *Queries) GetPendingTasksSortedByPriority(ctx context.Context) ([]Task, 
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, task_name, status, priority, start_time, end_time, note, created_at, updated_at FROM tasks
+SELECT id, task_name, status, priority, start_time, end_time, note, report, created_at, updated_at FROM tasks
 WHERE id = $1
 `
 
@@ -153,6 +158,7 @@ func (q *Queries) GetTask(ctx context.Context, id int32) (Task, error) {
 		&i.StartTime,
 		&i.EndTime,
 		&i.Note,
+		&i.Report,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -160,7 +166,7 @@ func (q *Queries) GetTask(ctx context.Context, id int32) (Task, error) {
 }
 
 const listTasks = `-- name: ListTasks :many
-SELECT id, task_name, status, priority, start_time, end_time, note, created_at, updated_at FROM tasks
+SELECT id, task_name, status, priority, start_time, end_time, note, report, created_at, updated_at FROM tasks
 ORDER BY created_at DESC
 `
 
@@ -181,6 +187,7 @@ func (q *Queries) ListTasks(ctx context.Context) ([]Task, error) {
 			&i.StartTime,
 			&i.EndTime,
 			&i.Note,
+			&i.Report,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -199,9 +206,9 @@ func (q *Queries) ListTasks(ctx context.Context) ([]Task, error) {
 
 const updateTask = `-- name: UpdateTask :one
 UPDATE tasks
-SET task_name = $2, status = $3, priority = $4, start_time = $5, end_time = $6, note = $7, updated_at = CURRENT_TIMESTAMP
+SET task_name = $2, status = $3, priority = $4, start_time = $5, end_time = $6, note = $7, report = $8, updated_at = CURRENT_TIMESTAMP
 WHERE id = $1
-RETURNING id, task_name, status, priority, start_time, end_time, note, created_at, updated_at
+RETURNING id, task_name, status, priority, start_time, end_time, note, report, created_at, updated_at
 `
 
 type UpdateTaskParams struct {
@@ -212,6 +219,7 @@ type UpdateTaskParams struct {
 	StartTime sql.NullTime
 	EndTime   sql.NullTime
 	Note      sql.NullString
+	Report    sql.NullString
 }
 
 func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error) {
@@ -223,6 +231,7 @@ func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, e
 		arg.StartTime,
 		arg.EndTime,
 		arg.Note,
+		arg.Report,
 	)
 	var i Task
 	err := row.Scan(
@@ -233,6 +242,68 @@ func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, e
 		&i.StartTime,
 		&i.EndTime,
 		&i.Note,
+		&i.Report,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateTaskStatus = `-- name: UpdateTaskStatus :one
+UPDATE tasks
+SET status = $2, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+RETURNING id, task_name, status, priority, start_time, end_time, note, report, created_at, updated_at
+`
+
+type UpdateTaskStatusParams struct {
+	ID     int32
+	Status TaskStatus
+}
+
+func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) (Task, error) {
+	row := q.db.QueryRowContext(ctx, updateTaskStatus, arg.ID, arg.Status)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.TaskName,
+		&i.Status,
+		&i.Priority,
+		&i.StartTime,
+		&i.EndTime,
+		&i.Note,
+		&i.Report,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateTaskStatusWithReport = `-- name: UpdateTaskStatusWithReport :one
+UPDATE tasks
+SET status = $2, report = $3, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+RETURNING id, task_name, status, priority, start_time, end_time, note, report, created_at, updated_at
+`
+
+type UpdateTaskStatusWithReportParams struct {
+	ID     int32
+	Status TaskStatus
+	Report sql.NullString
+}
+
+func (q *Queries) UpdateTaskStatusWithReport(ctx context.Context, arg UpdateTaskStatusWithReportParams) (Task, error) {
+	row := q.db.QueryRowContext(ctx, updateTaskStatusWithReport, arg.ID, arg.Status, arg.Report)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.TaskName,
+		&i.Status,
+		&i.Priority,
+		&i.StartTime,
+		&i.EndTime,
+		&i.Note,
+		&i.Report,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
