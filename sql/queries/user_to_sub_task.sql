@@ -17,6 +17,12 @@ SELECT * FROM user_to_sub_task
 WHERE user_id = $1
 ORDER BY assigned_at DESC;
 
+-- name: GetActiveAssignmentsByUserID :many
+SELECT uts.*, st.type_id FROM user_to_sub_task uts
+JOIN sub_tasks st ON uts.sub_task_id = st.id
+WHERE uts.user_id = $1 AND uts.status IN ('pending', 'process')
+ORDER BY uts.assigned_at DESC;
+
 -- name: UpdateUserSubTaskAssignment :one
 UPDATE user_to_sub_task
 SET report = $2, updated_at = CURRENT_TIMESTAMP

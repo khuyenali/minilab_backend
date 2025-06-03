@@ -59,6 +59,84 @@ func (q *Queries) DeleteTask(ctx context.Context, id int32) error {
 	return err
 }
 
+const getDraftTasksSortedByPriority = `-- name: GetDraftTasksSortedByPriority :many
+SELECT id, task_name, status, priority, start_time, end_time, note, created_at, updated_at FROM tasks
+WHERE status = 'draft'
+ORDER BY priority ASC, created_at ASC
+`
+
+func (q *Queries) GetDraftTasksSortedByPriority(ctx context.Context) ([]Task, error) {
+	rows, err := q.db.QueryContext(ctx, getDraftTasksSortedByPriority)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Task
+	for rows.Next() {
+		var i Task
+		if err := rows.Scan(
+			&i.ID,
+			&i.TaskName,
+			&i.Status,
+			&i.Priority,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Note,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPendingTasksSortedByPriority = `-- name: GetPendingTasksSortedByPriority :many
+SELECT id, task_name, status, priority, start_time, end_time, note, created_at, updated_at FROM tasks
+WHERE status = 'pending'
+ORDER BY priority ASC, created_at ASC
+`
+
+func (q *Queries) GetPendingTasksSortedByPriority(ctx context.Context) ([]Task, error) {
+	rows, err := q.db.QueryContext(ctx, getPendingTasksSortedByPriority)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Task
+	for rows.Next() {
+		var i Task
+		if err := rows.Scan(
+			&i.ID,
+			&i.TaskName,
+			&i.Status,
+			&i.Priority,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Note,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTask = `-- name: GetTask :one
 SELECT id, task_name, status, priority, start_time, end_time, note, created_at, updated_at FROM tasks
 WHERE id = $1

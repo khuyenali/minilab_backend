@@ -14,7 +14,7 @@ type SubTask struct {
 	SubTaskName    *string                  `json:"sub_task_name,omitempty" example:"Venue Booking Sub-Task"`
 	Description    *string                  `json:"description,omitempty" example:"Book the venue for the retreat"`
 	EstimateEffort *int32                   `json:"estimate_effort,omitempty" example:"8"`
-	Assignments    []*UserSubTaskAssignment `json:"assignments,omitempty"`
+	Assignments    []*UserSubTaskAssignment `json:"assignments"`
 }
 
 // UserSubTaskAssignment represents the assignment of a user to a sub-task
@@ -93,6 +93,7 @@ func FromDBSubTask(dbSubTask db.SubTask) *SubTask {
 		SubTaskName:    subTaskName,
 		Description:    description,
 		EstimateEffort: estimateEffort,
+		Assignments:    []*UserSubTaskAssignment{}, // Initialize empty slice for consistency
 	}
 }
 
@@ -135,6 +136,10 @@ func FromDBUserSubTaskAssignment(dbAssignment db.UserToSubTask) *UserSubTaskAssi
 
 // FromDBUserSubTaskAssignments converts slice of database models to domain models
 func FromDBUserSubTaskAssignments(dbAssignments []db.UserToSubTask) []*UserSubTaskAssignment {
+	if len(dbAssignments) == 0 {
+		return []*UserSubTaskAssignment{} // Return empty slice for consistency
+	}
+	
 	assignments := make([]*UserSubTaskAssignment, len(dbAssignments))
 	for i, dbAssignment := range dbAssignments {
 		assignments[i] = FromDBUserSubTaskAssignment(dbAssignment)

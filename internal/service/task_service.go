@@ -7,6 +7,8 @@ import (
 	"strings"
 	"errors"
 	"fmt"
+	"database/sql"
+	"mini-lab-api/internal/db"
 )
 
 // TaskService defines the interface for task business operations
@@ -17,6 +19,7 @@ type TaskService interface {
 	UpdateTask(ctx context.Context, id int32, req models.UpdateTaskRequest) (*models.Task, error)
 	UpdateTaskStatusToPending(ctx context.Context, id int32) (*models.Task, error)
 	DeleteTask(ctx context.Context, id int32) error
+	GetAvailableTasks(ctx context.Context) ([]int32, error)
 }
 
 // taskService implements TaskService
@@ -24,14 +27,18 @@ type taskService struct {
 	taskRepo     repository.TaskRepository
 	taskTypeRepo repository.TaskTypeRepository
 	userRepo     repository.UserRepository
+	db           *sql.DB
+	queries      *db.Queries
 }
 
 // NewTaskService creates a new task service
-func NewTaskService(taskRepo repository.TaskRepository, taskTypeRepo repository.TaskTypeRepository, userRepo repository.UserRepository) TaskService {
+func NewTaskService(taskRepo repository.TaskRepository, taskTypeRepo repository.TaskTypeRepository, userRepo repository.UserRepository, database *sql.DB) TaskService {
 	return &taskService{
 		taskRepo:     taskRepo,
 		taskTypeRepo: taskTypeRepo,
 		userRepo:     userRepo,
+		db:           database,
+		queries:      db.New(database),
 	}
 }
 
@@ -155,6 +162,161 @@ func (s *taskService) DeleteTask(ctx context.Context, id int32) error {
 	}
 	
 	return nil
+}
+
+// GetAvailableTasks returns available task IDs based on priority and user loading constraints
+func (s *taskService) GetAvailableTasks(ctx context.Context) ([]int32, error) {
+	// Get draft tasks sorted by priority (1=high, 2=medium, 3=low)
+	// Only draft tasks are available for auto assignment
+	draftTasks, err := s.queries.GetDraftTasksSortedByPriority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Get all member users (role_id = 3)
+	memberUsers, err := s.queries.GetUsersByRoleID(ctx, 3)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Calculate current user loading (in minutes)
+	userLoadings := make(map[int32]int32) // user_id -> total minutes
+	
+	for _, user := range memberUsers {
+		// Get active assignments for this user
+		activeAssignments, err := s.queries.GetActiveAssignmentsByUserID(ctx, user.ID)
+		if err != nil {
+			continue // Skip this user if we can't get their assignments
+		}
+		
+		totalMinutes := int32(0)
+		for _, assignment := range activeAssignments {
+			// Get machines for this task type to calculate duration
+			machines, err := s.queries.GetMachinesByTaskType(ctx, sql.NullInt32{Int32: assignment.TypeID, Valid: true})
+			if err != nil {
+				continue // Skip if we can't get machines
+			}
+			
+			// Sum up estimate times from all machines for this task type
+			taskTypeDuration := int32(0)
+			for _, machine := range machines {
+				taskTypeDuration += machine.EstimateTime
+			}
+			
+			totalMinutes += taskTypeDuration
+		}
+		
+		userLoadings[user.ID] = totalMinutes
+	}
+	
+	// Calculate current machine usage for each task type
+	// Only count pending/process assignments as using machines
+	// Finished assignments have released their machines
+	machineUsage := make(map[int32]int32) // task_type_id -> current usage count
+	
+	// Get all pending and processing tasks to count machine usage
+	pendingTasks, err := s.queries.GetPendingTasksSortedByPriority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	
+	for _, task := range pendingTasks {
+		subTasks, err := s.queries.GetSubTasksByTaskID(ctx, task.ID)
+		if err != nil {
+			continue
+		}
+		
+		for _, subTask := range subTasks {
+			// Get assignments for this sub-task
+			assignments, err := s.queries.GetAssignmentsBySubTaskID(ctx, subTask.ID)
+			if err != nil {
+				continue
+			}
+			
+			// Count assignments that are pending or processing (using machines)
+			for _, assignment := range assignments {
+				status := "pending" // default
+				if assignment.Status.Valid {
+					status = string(assignment.Status.AssignmentStatus)
+				}
+				
+				if status == "pending" || status == "process" {
+					machineUsage[subTask.TypeID]++
+				}
+			}
+		}
+	}
+	
+	// Filter draft tasks based on user loading constraints and machine availability
+	var availableTaskIDs []int32
+	const maxUserLoadingMinutes = 8 * 60 // 8 hours in minutes
+	
+	// Track how many machines would be needed if we include each task
+	projectedMachineUsage := make(map[int32]int32)
+	for k, v := range machineUsage {
+		projectedMachineUsage[k] = v
+	}
+	
+	for _, task := range draftTasks {
+		// Get sub-tasks for this task
+		subTasks, err := s.queries.GetSubTasksByTaskID(ctx, task.ID)
+		if err != nil {
+			continue // Skip this task if we can't get sub-tasks
+		}
+		
+		canAssignTask := true
+		var requiredMachines []int32 // Track which task types this task will use
+		
+		// Check each sub-task for both user loading and machine availability
+		for _, subTask := range subTasks {
+			// Calculate duration for this sub-task
+			machines, err := s.queries.GetMachinesByTaskType(ctx, sql.NullInt32{Int32: subTask.TypeID, Valid: true})
+			if err != nil {
+				canAssignTask = false
+				break
+			}
+			
+			subTaskDuration := int32(0)
+			totalMachineQuantity := int32(0)
+			for _, machine := range machines {
+				subTaskDuration += machine.EstimateTime
+				totalMachineQuantity += machine.Quantity
+			}
+			
+			// Check if there are available machines for this task type
+			if projectedMachineUsage[subTask.TypeID] >= totalMachineQuantity {
+				canAssignTask = false
+				break
+			}
+			
+			// Check if any member user can take this sub-task without exceeding 8 hours
+			canAssignSubTask := false
+			for _, user := range memberUsers {
+				if userLoadings[user.ID] + subTaskDuration <= maxUserLoadingMinutes {
+					canAssignSubTask = true
+					break
+				}
+			}
+			
+			if !canAssignSubTask {
+				canAssignTask = false
+				break
+			}
+			
+			// Track this task type for machine reservation
+			requiredMachines = append(requiredMachines, subTask.TypeID)
+		}
+		
+		if canAssignTask {
+			availableTaskIDs = append(availableTaskIDs, task.ID)
+			// Reserve machines for this task - increment usage for each sub-task
+			for _, taskTypeID := range requiredMachines {
+				projectedMachineUsage[taskTypeID]++
+			}
+		}
+	}
+	
+	return availableTaskIDs, nil
 }
 
 // validateCreateTaskRequest validates the create task request

@@ -10,6 +10,22 @@ import (
 	"database/sql"
 )
 
+const checkUserHasActiveTasks = `-- name: CheckUserHasActiveTasks :one
+SELECT EXISTS(
+    SELECT 1 FROM user_to_sub_task uts
+    JOIN sub_tasks st ON uts.sub_task_id = st.id  
+    JOIN tasks t ON st.task_id = t.id
+    WHERE uts.user_id = $1 AND t.status IN ('pending', 'processing')
+) AS has_active_tasks
+`
+
+func (q *Queries) CheckUserHasActiveTasks(ctx context.Context, userID int32) (bool, error) {
+	row := q.db.QueryRowContext(ctx, checkUserHasActiveTasks, userID)
+	var has_active_tasks bool
+	err := row.Scan(&has_active_tasks)
+	return has_active_tasks, err
+}
+
 const createUserSubTaskAssignment = `-- name: CreateUserSubTaskAssignment :one
 INSERT INTO user_to_sub_task (user_id, sub_task_id, report, status)
 VALUES ($1, $2, $3, $4)
@@ -66,6 +82,56 @@ type DeleteUserSubTaskAssignmentByUserAndSubTaskParams struct {
 func (q *Queries) DeleteUserSubTaskAssignmentByUserAndSubTask(ctx context.Context, arg DeleteUserSubTaskAssignmentByUserAndSubTaskParams) error {
 	_, err := q.db.ExecContext(ctx, deleteUserSubTaskAssignmentByUserAndSubTask, arg.UserID, arg.SubTaskID)
 	return err
+}
+
+const getActiveAssignmentsByUserID = `-- name: GetActiveAssignmentsByUserID :many
+SELECT uts.id, uts.user_id, uts.sub_task_id, uts.report, uts.status, uts.assigned_at, uts.updated_at, st.type_id FROM user_to_sub_task uts
+JOIN sub_tasks st ON uts.sub_task_id = st.id
+WHERE uts.user_id = $1 AND uts.status IN ('pending', 'process')
+ORDER BY uts.assigned_at DESC
+`
+
+type GetActiveAssignmentsByUserIDRow struct {
+	ID         int32
+	UserID     int32
+	SubTaskID  int32
+	Report     sql.NullString
+	Status     NullAssignmentStatus
+	AssignedAt sql.NullTime
+	UpdatedAt  sql.NullTime
+	TypeID     int32
+}
+
+func (q *Queries) GetActiveAssignmentsByUserID(ctx context.Context, userID int32) ([]GetActiveAssignmentsByUserIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, getActiveAssignmentsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetActiveAssignmentsByUserIDRow
+	for rows.Next() {
+		var i GetActiveAssignmentsByUserIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.SubTaskID,
+			&i.Report,
+			&i.Status,
+			&i.AssignedAt,
+			&i.UpdatedAt,
+			&i.TypeID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getAssignmentsBySubTaskID = `-- name: GetAssignmentsBySubTaskID :many

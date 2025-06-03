@@ -1210,6 +1210,33 @@ paths:
       summary: Update task status from draft to pending
       tags:
       - tasks
+  /api/v1/tasks/available:
+    get:
+      description: Get draft task IDs available for auto assignment based on priority,
+        user availability constraints (users not already processing assignments),
+        and machine availability. Only tasks with status="draft" are considered. Tasks
+        with pending/process status use machines, finished tasks release machines.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Available task IDs for auto assignment
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  items:
+                    type: integer
+                  type: array
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Get available tasks for auto assignment
+      tags:
+      - tasks
   /api/v1/user/{id}:
     put:
       consumes:

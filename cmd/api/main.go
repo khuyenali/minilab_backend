@@ -82,7 +82,7 @@ func main() {
 	roleService := service.NewRoleService(roleRepo)
 	taskTypeService := service.NewTaskTypeService(taskTypeRepo, userRepo)
 	machineService := service.NewMachineService(machineRepo, taskTypeRepo)
-	taskService := service.NewTaskService(taskRepo, taskTypeRepo, userRepo)
+	taskService := service.NewTaskService(taskRepo, taskTypeRepo, userRepo, db)
 	assignmentService := service.NewAssignmentService(db, taskRepo)
 
 	// Set Gin mode
@@ -157,6 +157,7 @@ func main() {
 		tasks := api.Group("/tasks")
 		{
 			tasks.GET("", h.GetTasks)
+			tasks.GET("/available", h.GetAvailableTasks)
 			tasks.POST("", h.CreateTask)
 			tasks.GET("/:id", h.GetTask)
 			tasks.PUT("/:id", h.UpdateTask)

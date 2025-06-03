@@ -268,6 +268,8 @@ func (r *taskRepository) GetWithSubTasks(ctx context.Context, id int32) (*models
 		}
 		
 		task.SubTasks = subTasks
+	} else {
+		task.SubTasks = []*models.SubTask{}
 	}
 
 	return task, nil

@@ -15,7 +15,7 @@ type Task struct {
 	StartTime *time.Time `json:"start_time,omitempty" example:"2024-07-01T00:00:00Z"`
 	EndTime   *time.Time `json:"end_time,omitempty" example:"2024-07-05T00:00:00Z"`
 	Note      *string    `json:"note,omitempty" example:"Annual company-wide retreat"`
-	SubTasks  []*SubTask `json:"sub_tasks,omitempty"`
+	SubTasks  []*SubTask `json:"sub_tasks"`
 	CreatedAt time.Time  `json:"created_at" example:"2023-01-01T00:00:00Z"`
 	UpdatedAt time.Time  `json:"updated_at" example:"2023-01-01T00:00:00Z"`
 }
@@ -77,6 +77,7 @@ func FromDBTask(dbTask db.Task) *Task {
 		StartTime: startTime,
 		EndTime:   endTime,
 		Note:      note,
+		SubTasks:  []*SubTask{},
 		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
 	}

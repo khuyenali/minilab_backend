@@ -1011,6 +1011,47 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/tasks/available": {
+            "get": {
+                "description": "Get draft task IDs available for auto assignment based on priority, user availability constraints (users not already processing assignments), and machine availability. Only tasks with status=\"draft\" are considered. Tasks with pending/process status use machines, finished tasks release machines.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Get available tasks for auto assignment",
+                "responses": {
+                    "200": {
+                        "description": "Available task IDs for auto assignment",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.ApiResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "integer"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ApiResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/tasks/{id}": {
             "get": {
                 "description": "Get a single task by its ID with sub-tasks containing their assignments",

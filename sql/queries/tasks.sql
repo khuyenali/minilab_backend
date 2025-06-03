@@ -11,6 +11,16 @@ WHERE id = $1;
 SELECT * FROM tasks
 ORDER BY created_at DESC;
 
+-- name: GetPendingTasksSortedByPriority :many
+SELECT * FROM tasks
+WHERE status = 'pending'
+ORDER BY priority ASC, created_at ASC;
+
+-- name: GetDraftTasksSortedByPriority :many
+SELECT * FROM tasks
+WHERE status = 'draft'
+ORDER BY priority ASC, created_at ASC;
+
 -- name: UpdateTask :one
 UPDATE tasks
 SET task_name = $2, status = $3, priority = $4, start_time = $5, end_time = $6, note = $7, updated_at = CURRENT_TIMESTAMP

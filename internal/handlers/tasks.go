@@ -35,6 +35,32 @@ func (h *Handler) GetTasks(c *gin.Context) {
 	})
 }
 
+// GetAvailableTasks handles GET /tasks/available
+// @Summary Get available tasks for auto assignment
+// @Description Get draft task IDs available for auto assignment based on priority, user loading constraints (8 hours max), and machine availability. Only tasks with status="draft" are considered. Tasks with pending/process status use machines, finished tasks release machines.
+// @Tags tasks
+// @Produce json
+// @Success 200 {object} ApiResponse{data=[]int32} "Available task IDs for auto assignment"
+// @Failure 500 {object} ApiResponse "Internal server error"
+// @Router /api/v1/tasks/available [get]
+func (h *Handler) GetAvailableTasks(c *gin.Context) {
+	taskIDs, err := h.taskService.GetAvailableTasks(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to get available tasks",
+			"status":  "error",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":    taskIDs,
+		"status":  "success",
+		"message": "Available task IDs retrieved successfully",
+	})
+}
+
 // GetTask handles GET /tasks/:id
 // @Summary Get task by ID
 // @Description Get a single task by its ID with sub-tasks containing their assignments
