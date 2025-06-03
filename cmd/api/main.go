@@ -26,8 +26,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	// "github.com/prometheus/client_golang/prometheus"        // Added for collector registration
+	// "github.com/prometheus/client_golang/prometheus/collectors" // Added for Go and Process collectors
+	// "github.com/prometheus/client_golang/prometheus/promhttp" // No longer directly used
 	"github.com/swaggo/files"
 	"github.com/swaggo/gin-swagger"
+	"github.com/zsais/go-gin-prometheus" // Import for Gin Prometheus middleware
 	"mini-lab-api/internal/config"
 	"mini-lab-api/internal/handlers"
 	"mini-lab-api/internal/repository"
@@ -56,6 +60,11 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
+
+	// Register standard Go collectors and process collector
+	// These will be exposed alongside ginprometheus metrics if it uses the default registry.
+	// prometheus.MustRegister(collectors.NewGoCollector()) // Removed due to duplicate registration panic
+	// prometheus.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{})) // Removed due to duplicate registration panic
 
 	// Initialize configuration
 	cfg := config.New()
@@ -92,6 +101,11 @@ func main() {
 
 	// Initialize Gin router
 	r := gin.Default()
+
+	// Initialize go-gin-prometheus middleware
+	// This will collect metrics AND expose /metrics by default with this library version
+	p := ginprometheus.NewPrometheus("gin") 
+	p.Use(r) 
 
 	// Add middleware
 	r.Use(gin.Logger())

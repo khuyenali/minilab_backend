@@ -1,15 +1,16 @@
 module mini-lab-api
 
-go 1.24.3
+go 1.21
 
 require (
-	github.com/gin-gonic/gin v1.10.1
+	github.com/gin-gonic/gin v1.10.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
-	github.com/stretchr/testify v1.10.0
+	github.com/prometheus/client_golang v1.19.1
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
-	github.com/swaggo/swag v1.16.4
+	github.com/swaggo/swag v1.16.3
+	github.com/zsais/go-gin-prometheus v0.1.0
 )
 
 require (
