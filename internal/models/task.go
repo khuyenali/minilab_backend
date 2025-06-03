@@ -15,7 +15,8 @@ type Task struct {
 	StartTime *time.Time `json:"start_time,omitempty" example:"2024-07-01T00:00:00Z"`
 	EndTime   *time.Time `json:"end_time,omitempty" example:"2024-07-05T00:00:00Z"`
 	Note      *string    `json:"note,omitempty" example:"Annual company-wide retreat"`
-	SubTasks  []*SubTask `json:"sub_tasks,omitempty"`
+	Report    *string    `json:"report,omitempty" example:"Task completed successfully with all requirements met"`
+	SubTasks  []*SubTask `json:"sub_tasks"`
 	CreatedAt time.Time  `json:"created_at" example:"2023-01-01T00:00:00Z"`
 	UpdatedAt time.Time  `json:"updated_at" example:"2023-01-01T00:00:00Z"`
 }
@@ -47,11 +48,22 @@ type UpdateTaskRequest struct {
 	Note      *string    `json:"note,omitempty" example:"Updated note"`
 }
 
+// UpdateTaskStatusRequest represents the request to update task status
+type UpdateTaskStatusRequest struct {
+	Status string  `json:"status" binding:"required" example:"processing"`
+	Report *string `json:"report,omitempty" example:"Task completed successfully"`
+}
+
+// FinishTaskRequest represents the request to finish a task with a report
+type FinishTaskRequest struct {
+	Report string `json:"report" binding:"required" example:"Task completed successfully with all deliverables met"`
+}
+
 // FromDBTask converts database model to domain model
 func FromDBTask(dbTask db.Task) *Task {
 	var createdAt, updatedAt time.Time
 	var startTime, endTime *time.Time
-	var note *string
+	var note, report *string
 	
 	if dbTask.CreatedAt.Valid {
 		createdAt = dbTask.CreatedAt.Time
@@ -68,6 +80,9 @@ func FromDBTask(dbTask db.Task) *Task {
 	if dbTask.Note.Valid {
 		note = &dbTask.Note.String
 	}
+	if dbTask.Report.Valid {
+		report = &dbTask.Report.String
+	}
 	
 	return &Task{
 		ID:        dbTask.ID,
@@ -77,6 +92,8 @@ func FromDBTask(dbTask db.Task) *Task {
 		StartTime: startTime,
 		EndTime:   endTime,
 		Note:      note,
+		Report:    report,
+		SubTasks:  []*SubTask{},
 		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
 	}
@@ -104,7 +121,7 @@ func (req *CreateTaskRequest) ToCreateTaskParams() db.CreateTaskParams {
 	}
 
 	var startTime, endTime sql.NullTime
-	var note sql.NullString
+	var note, report sql.NullString
 
 	if req.StartTime != nil {
 		startTime = sql.NullTime{Time: *req.StartTime, Valid: true}
@@ -115,6 +132,7 @@ func (req *CreateTaskRequest) ToCreateTaskParams() db.CreateTaskParams {
 	if req.Note != nil {
 		note = sql.NullString{String: *req.Note, Valid: true}
 	}
+	// Report is initially NULL for new tasks
 
 	return db.CreateTaskParams{
 		TaskName:  req.TaskName,
@@ -123,5 +141,6 @@ func (req *CreateTaskRequest) ToCreateTaskParams() db.CreateTaskParams {
 		StartTime: startTime,
 		EndTime:   endTime,
 		Note:      note,
+		Report:    report,
 	}
 } 

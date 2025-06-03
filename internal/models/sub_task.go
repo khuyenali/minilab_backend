@@ -14,7 +14,7 @@ type SubTask struct {
 	SubTaskName    *string                  `json:"sub_task_name,omitempty" example:"Venue Booking Sub-Task"`
 	Description    *string                  `json:"description,omitempty" example:"Book the venue for the retreat"`
 	EstimateEffort *int32                   `json:"estimate_effort,omitempty" example:"8"`
-	Assignments    []*UserSubTaskAssignment `json:"assignments,omitempty"`
+	Assignments    []*UserSubTaskAssignment `json:"assignments"`
 }
 
 // UserSubTaskAssignment represents the assignment of a user to a sub-task
@@ -22,8 +22,6 @@ type UserSubTaskAssignment struct {
 	AssignmentID int32      `json:"assignment_id" example:"201"`
 	UserID       int32      `json:"user_id" example:"3"`
 	SubTaskID    int32      `json:"sub_task_id" example:"105"`
-	Report       *string    `json:"report,omitempty" example:"Task assigned to implement the UI"`
-	Status       string     `json:"status" example:"pending"`
 	AssignedAt   time.Time  `json:"assigned_at" example:"2023-01-01T12:00:00Z"`
 	User         *UserBasic `json:"user_details,omitempty"`
 }
@@ -57,7 +55,7 @@ type UpdateUserSubTaskAssignmentRequest struct {
 
 // UpdateAssignmentStatusRequest represents the request to update assignment status only
 type UpdateAssignmentStatusRequest struct {
-	// No body needed for processing status update
+	Status string `json:"status" binding:"required" example:"processing"`
 }
 
 // FinishAssignmentRequest represents the request to finish an assignment with a report
@@ -93,6 +91,7 @@ func FromDBSubTask(dbSubTask db.SubTask) *SubTask {
 		SubTaskName:    subTaskName,
 		Description:    description,
 		EstimateEffort: estimateEffort,
+		Assignments:    []*UserSubTaskAssignment{}, // Initialize empty slice for consistency
 	}
 }
 
@@ -108,33 +107,25 @@ func FromDBSubTasks(dbSubTasks []db.SubTask) []*SubTask {
 // FromDBUserSubTaskAssignment converts database model to domain model
 func FromDBUserSubTaskAssignment(dbAssignment db.UserToSubTask) *UserSubTaskAssignment {
 	var assignedAt time.Time
-	var report *string
-	var status string
 	
 	if dbAssignment.AssignedAt.Valid {
 		assignedAt = dbAssignment.AssignedAt.Time
-	}
-	if dbAssignment.Report.Valid {
-		report = &dbAssignment.Report.String
-	}
-	if dbAssignment.Status.Valid {
-		status = string(dbAssignment.Status.AssignmentStatus)
-	} else {
-		status = "pending" // default value
 	}
 	
 	return &UserSubTaskAssignment{
 		AssignmentID: dbAssignment.ID,
 		UserID:       dbAssignment.UserID,
 		SubTaskID:    dbAssignment.SubTaskID,
-		Report:       report,
-		Status:       status,
 		AssignedAt:   assignedAt,
 	}
 }
 
 // FromDBUserSubTaskAssignments converts slice of database models to domain models
 func FromDBUserSubTaskAssignments(dbAssignments []db.UserToSubTask) []*UserSubTaskAssignment {
+	if len(dbAssignments) == 0 {
+		return []*UserSubTaskAssignment{} // Return empty slice for consistency
+	}
+	
 	assignments := make([]*UserSubTaskAssignment, len(dbAssignments))
 	for i, dbAssignment := range dbAssignments {
 		assignments[i] = FromDBUserSubTaskAssignment(dbAssignment)

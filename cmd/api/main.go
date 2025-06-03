@@ -26,8 +26,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	// "github.com/prometheus/client_golang/prometheus"        // Added for collector registration
+	// "github.com/prometheus/client_golang/prometheus/collectors" // Added for Go and Process collectors
+	// "github.com/prometheus/client_golang/prometheus/promhttp" // No longer directly used
 	"github.com/swaggo/files"
 	"github.com/swaggo/gin-swagger"
+	"github.com/zsais/go-gin-prometheus" // Import for Gin Prometheus middleware
 	"mini-lab-api/internal/config"
 	"mini-lab-api/internal/handlers"
 	"mini-lab-api/internal/repository"
@@ -57,6 +61,11 @@ func main() {
 		log.Println("No .env file found")
 	}
 
+	// Register standard Go collectors and process collector
+	// These will be exposed alongside ginprometheus metrics if it uses the default registry.
+	// prometheus.MustRegister(collectors.NewGoCollector()) // Removed due to duplicate registration panic
+	// prometheus.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{})) // Removed due to duplicate registration panic
+
 	// Initialize configuration
 	cfg := config.New()
 
@@ -82,7 +91,7 @@ func main() {
 	roleService := service.NewRoleService(roleRepo)
 	taskTypeService := service.NewTaskTypeService(taskTypeRepo, userRepo)
 	machineService := service.NewMachineService(machineRepo, taskTypeRepo)
-	taskService := service.NewTaskService(taskRepo, taskTypeRepo, userRepo)
+	taskService := service.NewTaskService(taskRepo, taskTypeRepo, userRepo, db)
 	assignmentService := service.NewAssignmentService(db, taskRepo)
 
 	// Set Gin mode
@@ -92,6 +101,11 @@ func main() {
 
 	// Initialize Gin router
 	r := gin.Default()
+
+	// Initialize go-gin-prometheus middleware
+	// This will collect metrics AND expose /metrics by default with this library version
+	p := ginprometheus.NewPrometheus("gin") 
+	p.Use(r) 
 
 	// Add middleware
 	r.Use(gin.Logger())
@@ -153,23 +167,27 @@ func main() {
 			machines.DELETE("/:id", h.DeleteMachine)
 		}
 		
+		// Task cleanup route (separate path to avoid conflicts)
+		api.DELETE("/cleanup-draft-assignments", h.CleanDraftTaskAssignments)
+		
 		// Task routes
 		tasks := api.Group("/tasks")
 		{
 			tasks.GET("", h.GetTasks)
+			tasks.GET("/available", h.GetAvailableTasks)
 			tasks.POST("", h.CreateTask)
 			tasks.GET("/:id", h.GetTask)
 			tasks.PUT("/:id", h.UpdateTask)
-			tasks.PUT("/:id/status", h.UpdateTaskStatusToPending)
+			tasks.PUT("/:id/pending", h.UpdateTaskToPending)
+			tasks.PUT("/:id/processing", h.UpdateTaskToProcessing)
+			tasks.PUT("/:id/finish", h.FinishTask)
 			tasks.DELETE("/:id", h.DeleteTask)
 		}
 		
-		// Assignment routes
+		// Assignment routes (simplified)
 		assignments := api.Group("/assignments")
 		{
 			assignments.POST("", h.CreateAssignment)
-			assignments.PUT("/process/:id", h.UpdateAssignmentToProcessing)
-			assignments.PUT("/finish/:id", h.FinishAssignment)
 			assignments.DELETE("/:id", h.DeleteAssignment)
 		}
 	}

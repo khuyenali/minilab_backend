@@ -122,10 +122,10 @@ definitions:
     - email
     - name
     type: object
-  models.FinishAssignmentRequest:
+  models.FinishTaskRequest:
     properties:
       report:
-        example: Task completed successfully
+        example: Task completed successfully with all deliverables met
         type: string
     required:
     - report
@@ -243,6 +243,9 @@ definitions:
       priority:
         example: 1
         type: integer
+      report:
+        example: Task completed successfully with all requirements met
+        type: string
       start_time:
         example: "2024-07-01T00:00:00Z"
         type: string
@@ -415,12 +418,6 @@ definitions:
       assignment_id:
         example: 201
         type: integer
-      report:
-        example: Task assigned to implement the UI
-        type: string
-      status:
-        example: pending
-        type: string
       sub_task_id:
         example: 105
         type: integer
@@ -523,84 +520,22 @@ paths:
       summary: Delete an assignment
       tags:
       - assignments
-  /api/v1/assignments/finish/{id}:
-    put:
-      consumes:
-      - application/json
-      description: Change assignment status from processing to finish with a required
-        report
-      parameters:
-      - description: Assignment ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Assignment finish data with report
-        in: body
-        name: assignment
-        required: true
-        schema:
-          $ref: '#/definitions/models.FinishAssignmentRequest'
+  /api/v1/cleanup-draft-assignments:
+    delete:
+      description: Delete all existing assignments for tasks in draft status to prepare
+        for clean auto-assignment
       responses:
         "200":
-          description: Assignment status updated to finish successfully
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.ApiResponse'
-            - properties:
-                data:
-                  $ref: '#/definitions/models.UserSubTaskAssignment'
-              type: object
-        "400":
-          description: Invalid assignment ID, invalid status transition, or missing
-            report
-          schema:
-            $ref: '#/definitions/handlers.ApiResponse'
-        "404":
-          description: Assignment not found
+          description: Draft task assignments cleaned successfully
           schema:
             $ref: '#/definitions/handlers.ApiResponse'
         "500":
           description: Internal server error
           schema:
             $ref: '#/definitions/handlers.ApiResponse'
-      summary: Change assignment status from processing to finish with report
+      summary: Clean all assignments from draft tasks
       tags:
-      - assignments
-  /api/v1/assignments/process/{id}:
-    put:
-      description: Change assignment status from pending to processing
-      parameters:
-      - description: Assignment ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      responses:
-        "200":
-          description: Assignment status updated to processing successfully
-          schema:
-            allOf:
-            - $ref: '#/definitions/handlers.ApiResponse'
-            - properties:
-                data:
-                  $ref: '#/definitions/models.UserSubTaskAssignment'
-              type: object
-        "400":
-          description: Invalid assignment ID or invalid status transition
-          schema:
-            $ref: '#/definitions/handlers.ApiResponse'
-        "404":
-          description: Assignment not found
-          schema:
-            $ref: '#/definitions/handlers.ApiResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/handlers.ApiResponse'
-      summary: Change assignment status from pending to processing
-      tags:
-      - assignments
+      - tasks
   /api/v1/machine:
     get:
       description: Get a list of all machines
@@ -1174,20 +1109,28 @@ paths:
       summary: Update a task
       tags:
       - tasks
-  /api/v1/tasks/{id}/status:
+  /api/v1/tasks/{id}/finish:
     put:
-      description: Update a task's status from draft to pending
+      consumes:
+      - application/json
+      description: Finish a task by updating status to 'finish' with a required report
       parameters:
       - description: Task ID
         in: path
         name: id
         required: true
         type: integer
+      - description: Task finish data with report
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/models.FinishTaskRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: Task status updated successfully
+          description: Task finished successfully
           schema:
             allOf:
             - $ref: '#/definitions/handlers.ApiResponse'
@@ -1196,7 +1139,7 @@ paths:
                   $ref: '#/definitions/models.Task'
               type: object
         "400":
-          description: Invalid task ID or status transition
+          description: Invalid task ID, missing report, or invalid transition
           schema:
             $ref: '#/definitions/handlers.ApiResponse'
         "404":
@@ -1207,7 +1150,106 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/handlers.ApiResponse'
-      summary: Update task status from draft to pending
+      summary: Finish a task with a required report
+      tags:
+      - tasks
+  /api/v1/tasks/{id}/pending:
+    put:
+      description: Update a task status from draft to pending
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: Task status updated to pending successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Task'
+              type: object
+        "400":
+          description: Invalid task ID or invalid status transition
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "404":
+          description: Task not found
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Update task status to pending
+      tags:
+      - tasks
+  /api/v1/tasks/{id}/processing:
+    put:
+      description: Update a task status from pending to processing
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: Task status updated to processing successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Task'
+              type: object
+        "400":
+          description: Invalid task ID or invalid status transition
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "404":
+          description: Task not found
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Update task status to processing
+      tags:
+      - tasks
+  /api/v1/tasks/available:
+    get:
+      description: 'Get draft task IDs available for auto assignment and automatically
+        create assignments. Based on priority, machine availability, and user task
+        type matching. Only draft tasks are considered. Tasks are filtered by: 1)
+        enough available machines (each sub-task consumes 1 machine), 2) users not
+        already working on pending/processing/draft tasks, 3) users with matching
+        task types, 4) sub-tasks that don''t already have assignments. Automatically
+        creates assignments for available users and returns task IDs. Use DELETE /tasks/assignments/draft
+        first to clean existing assignments for a fresh start.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Available task IDs with auto-created assignments
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.ApiResponse'
+            - properties:
+                data:
+                  items:
+                    type: integer
+                  type: array
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Get available tasks for auto assignment
       tags:
       - tasks
   /api/v1/user/{id}:

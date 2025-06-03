@@ -100,7 +100,7 @@ func (r *taskRepository) ListWithSubTasks(ctx context.Context) ([]*models.Task, 
 	return tasks, nil
 }
 
-// Create creates a new task with sub-tasks and assignments in a transaction
+// Create creates a new task with sub-tasks and assignments
 func (r *taskRepository) Create(ctx context.Context, req models.CreateTaskRequest) (*models.Task, error) {
 	// Start a transaction
 	tx, err := r.db.BeginTx(ctx, nil)
@@ -109,7 +109,6 @@ func (r *taskRepository) Create(ctx context.Context, req models.CreateTaskReques
 	}
 	defer tx.Rollback()
 
-	// Create queries with transaction
 	txQueries := r.queries.WithTx(tx)
 
 	// Create the main task
@@ -129,11 +128,8 @@ func (r *taskRepository) Create(ctx context.Context, req models.CreateTaskReques
 		for _, subTaskReq := range req.SubTasks {
 			// Create sub-task
 			subTaskParams := db.CreateSubTaskParams{
-				TaskID:         dbTask.ID,
-				TypeID:         subTaskReq.TypeID,
-				SubTaskName:    sql.NullString{}, // Will be set to null initially
-				Description:    sql.NullString{}, // Will be set to null initially
-				EstimateEffort: sql.NullInt32{},  // Will be set to null initially
+				TaskID: dbTask.ID,
+				TypeID: subTaskReq.TypeID,
 			}
 
 			dbSubTask, err := txQueries.CreateSubTask(ctx, subTaskParams)
@@ -141,10 +137,9 @@ func (r *taskRepository) Create(ctx context.Context, req models.CreateTaskReques
 				return nil, err
 			}
 
-			// Convert to domain model
 			subTask := models.FromDBSubTask(dbSubTask)
 
-			// Create user assignments if provided
+			// Create assignments if user IDs are provided
 			if len(subTaskReq.UserIDs) > 0 {
 				assignments := make([]*models.UserSubTaskAssignment, 0, len(subTaskReq.UserIDs))
 				
@@ -152,8 +147,6 @@ func (r *taskRepository) Create(ctx context.Context, req models.CreateTaskReques
 					assignmentParams := db.CreateUserSubTaskAssignmentParams{
 						UserID:    userID,
 						SubTaskID: dbSubTask.ID,
-						Report:    sql.NullString{}, // Default to null
-						Status:    db.NullAssignmentStatus{AssignmentStatus: db.AssignmentStatusPending, Valid: true}, // Default to pending
 					}
 
 					dbAssignment, err := txQueries.CreateUserSubTaskAssignment(ctx, assignmentParams)
@@ -191,7 +184,7 @@ func (r *taskRepository) Update(ctx context.Context, id int32, req models.Update
 	}
 
 	var startTime, endTime sql.NullTime
-	var note sql.NullString
+	var note, report sql.NullString
 
 	if req.StartTime != nil {
 		startTime = sql.NullTime{Time: *req.StartTime, Valid: true}
@@ -211,6 +204,7 @@ func (r *taskRepository) Update(ctx context.Context, id int32, req models.Update
 		StartTime: startTime,
 		EndTime:   endTime,
 		Note:      note,
+		Report:    report, // This will be NULL for regular updates
 	})
 	if err != nil {
 		return nil, err
@@ -268,6 +262,8 @@ func (r *taskRepository) GetWithSubTasks(ctx context.Context, id int32) (*models
 		}
 		
 		task.SubTasks = subTasks
+	} else {
+		task.SubTasks = []*models.SubTask{}
 	}
 
 	return task, nil

@@ -9,6 +9,7 @@ CREATE TABLE tasks (
     start_time TIMESTAMP,
     end_time TIMESTAMP,
     note TEXT,
+    report TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
