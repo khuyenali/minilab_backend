@@ -153,6 +153,9 @@ func main() {
 			machines.DELETE("/:id", h.DeleteMachine)
 		}
 		
+		// Task cleanup route (separate path to avoid conflicts)
+		api.DELETE("/cleanup-draft-assignments", h.CleanDraftTaskAssignments)
+		
 		// Task routes
 		tasks := api.Group("/tasks")
 		{

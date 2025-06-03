@@ -37,10 +37,10 @@ func (h *Handler) GetTasks(c *gin.Context) {
 
 // GetAvailableTasks handles GET /tasks/available
 // @Summary Get available tasks for auto assignment
-// @Description Get draft task IDs available for auto assignment based on priority, user loading constraints (8 hours max), and machine availability. Only tasks with status="draft" are considered. Tasks with pending/process status use machines, finished tasks release machines.
+// @Description Get draft task IDs available for auto assignment and automatically create assignments. Based on priority, machine availability, and user task type matching. Only draft tasks are considered. Tasks are filtered by: 1) enough available machines (each sub-task consumes 1 machine), 2) users not already working on pending/processing/draft tasks, 3) users with matching task types, 4) sub-tasks that don't already have assignments. Automatically creates assignments for available users and returns task IDs. Use DELETE /tasks/assignments/draft first to clean existing assignments for a fresh start.
 // @Tags tasks
 // @Produce json
-// @Success 200 {object} ApiResponse{data=[]int32} "Available task IDs for auto assignment"
+// @Success 200 {object} ApiResponse{data=[]int32} "Available task IDs with auto-created assignments"
 // @Failure 500 {object} ApiResponse "Internal server error"
 // @Router /api/v1/tasks/available [get]
 func (h *Handler) GetAvailableTasks(c *gin.Context) {
@@ -495,5 +495,29 @@ func (h *Handler) UpdateTaskToProcessing(c *gin.Context) {
 		"data":    task,
 		"status":  "success",
 		"message": "Task status updated to processing successfully",
+	})
+}
+
+// CleanDraftTaskAssignments handles DELETE /cleanup-draft-assignments
+// @Summary Clean all assignments from draft tasks
+// @Description Delete all existing assignments for tasks in draft status to prepare for clean auto-assignment
+// @Tags tasks
+// @Success 200 {object} ApiResponse "Draft task assignments cleaned successfully"
+// @Failure 500 {object} ApiResponse "Internal server error"
+// @Router /api/v1/cleanup-draft-assignments [delete]
+func (h *Handler) CleanDraftTaskAssignments(c *gin.Context) {
+	err := h.taskService.CleanDraftTaskAssignments(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to clean draft task assignments",
+			"status":  "error",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Draft task assignments cleaned successfully",
 	})
 } 

@@ -15,7 +15,7 @@ SELECT EXISTS(
     SELECT 1 FROM user_to_sub_task uts
     JOIN sub_tasks st ON uts.sub_task_id = st.id  
     JOIN tasks t ON st.task_id = t.id
-    WHERE uts.user_id = $1 AND t.status IN ('pending', 'processing')
+    WHERE uts.user_id = $1 AND t.status IN ('draft', 'pending', 'processing')
 ) AS has_active_tasks
 `
 
@@ -48,6 +48,19 @@ func (q *Queries) CreateUserSubTaskAssignment(ctx context.Context, arg CreateUse
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const deleteAssignmentsForDraftTasks = `-- name: DeleteAssignmentsForDraftTasks :exec
+DELETE FROM user_to_sub_task
+USING sub_tasks, tasks
+WHERE user_to_sub_task.sub_task_id = sub_tasks.id 
+  AND sub_tasks.task_id = tasks.id 
+  AND tasks.status = 'draft'
+`
+
+func (q *Queries) DeleteAssignmentsForDraftTasks(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, deleteAssignmentsForDraftTasks)
+	return err
 }
 
 const deleteUserSubTaskAssignment = `-- name: DeleteUserSubTaskAssignment :exec

@@ -43,10 +43,17 @@ WHERE id = $1;
 DELETE FROM user_to_sub_task
 WHERE user_id = $1 AND sub_task_id = $2;
 
+-- name: DeleteAssignmentsForDraftTasks :exec
+DELETE FROM user_to_sub_task
+USING sub_tasks, tasks
+WHERE user_to_sub_task.sub_task_id = sub_tasks.id 
+  AND sub_tasks.task_id = tasks.id 
+  AND tasks.status = 'draft';
+
 -- name: CheckUserHasActiveTasks :one
 SELECT EXISTS(
     SELECT 1 FROM user_to_sub_task uts
     JOIN sub_tasks st ON uts.sub_task_id = st.id  
     JOIN tasks t ON st.task_id = t.id
-    WHERE uts.user_id = $1 AND t.status IN ('pending', 'processing')
+    WHERE uts.user_id = $1 AND t.status IN ('draft', 'pending', 'processing')
 ) AS has_active_tasks; 

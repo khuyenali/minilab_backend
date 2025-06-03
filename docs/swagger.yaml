@@ -520,6 +520,22 @@ paths:
       summary: Delete an assignment
       tags:
       - assignments
+  /api/v1/cleanup-draft-assignments:
+    delete:
+      description: Delete all existing assignments for tasks in draft status to prepare
+        for clean auto-assignment
+      responses:
+        "200":
+          description: Draft task assignments cleaned successfully
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ApiResponse'
+      summary: Clean all assignments from draft tasks
+      tags:
+      - tasks
   /api/v1/machine:
     get:
       description: Get a list of all machines
@@ -1207,15 +1223,19 @@ paths:
       - tasks
   /api/v1/tasks/available:
     get:
-      description: Get draft task IDs available for auto assignment based on priority,
-        user loading constraints (8 hours max), and machine availability. Only tasks
-        with status="draft" are considered. Tasks with pending/process status use
-        machines, finished tasks release machines.
+      description: 'Get draft task IDs available for auto assignment and automatically
+        create assignments. Based on priority, machine availability, and user task
+        type matching. Only draft tasks are considered. Tasks are filtered by: 1)
+        enough available machines (each sub-task consumes 1 machine), 2) users not
+        already working on pending/processing/draft tasks, 3) users with matching
+        task types, 4) sub-tasks that don''t already have assignments. Automatically
+        creates assignments for available users and returns task IDs. Use DELETE /tasks/assignments/draft
+        first to clean existing assignments for a fresh start.'
       produces:
       - application/json
       responses:
         "200":
-          description: Available task IDs for auto assignment
+          description: Available task IDs with auto-created assignments
           schema:
             allOf:
             - $ref: '#/definitions/handlers.ApiResponse'

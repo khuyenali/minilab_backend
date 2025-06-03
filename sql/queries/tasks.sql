@@ -21,6 +21,16 @@ SELECT * FROM tasks
 WHERE status = 'draft'
 ORDER BY priority ASC, created_at ASC;
 
+-- name: GetProcessingTasksSortedByPriority :many
+SELECT * FROM tasks
+WHERE status = 'processing'
+ORDER BY priority ASC, created_at ASC;
+
+-- name: GetTasksByStatus :many
+SELECT * FROM tasks
+WHERE status = $1
+ORDER BY priority ASC, created_at ASC;
+
 -- name: UpdateTask :one
 UPDATE tasks
 SET task_name = $2, status = $3, priority = $4, start_time = $5, end_time = $6, note = $7, report = $8, updated_at = CURRENT_TIMESTAMP

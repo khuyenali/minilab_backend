@@ -142,6 +142,46 @@ func (q *Queries) GetPendingTasksSortedByPriority(ctx context.Context) ([]Task, 
 	return items, nil
 }
 
+const getProcessingTasksSortedByPriority = `-- name: GetProcessingTasksSortedByPriority :many
+SELECT id, task_name, status, priority, start_time, end_time, note, report, created_at, updated_at FROM tasks
+WHERE status = 'processing'
+ORDER BY priority ASC, created_at ASC
+`
+
+func (q *Queries) GetProcessingTasksSortedByPriority(ctx context.Context) ([]Task, error) {
+	rows, err := q.db.QueryContext(ctx, getProcessingTasksSortedByPriority)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Task
+	for rows.Next() {
+		var i Task
+		if err := rows.Scan(
+			&i.ID,
+			&i.TaskName,
+			&i.Status,
+			&i.Priority,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Note,
+			&i.Report,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTask = `-- name: GetTask :one
 SELECT id, task_name, status, priority, start_time, end_time, note, report, created_at, updated_at FROM tasks
 WHERE id = $1
@@ -163,6 +203,46 @@ func (q *Queries) GetTask(ctx context.Context, id int32) (Task, error) {
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getTasksByStatus = `-- name: GetTasksByStatus :many
+SELECT id, task_name, status, priority, start_time, end_time, note, report, created_at, updated_at FROM tasks
+WHERE status = $1
+ORDER BY priority ASC, created_at ASC
+`
+
+func (q *Queries) GetTasksByStatus(ctx context.Context, status TaskStatus) ([]Task, error) {
+	rows, err := q.db.QueryContext(ctx, getTasksByStatus, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Task
+	for rows.Next() {
+		var i Task
+		if err := rows.Scan(
+			&i.ID,
+			&i.TaskName,
+			&i.Status,
+			&i.Priority,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Note,
+			&i.Report,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listTasks = `-- name: ListTasks :many
