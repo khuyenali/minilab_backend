@@ -1,0 +1,27 @@
+name: Go Test CI
+
+on:
+  push:
+    branches:
+      - main # Or your default branch
+  pull_request:
+    branches:
+      - main # Or your default branch
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x' # Using the toolchain version
+
+      - name: Run tests
+        run: go test ./...
+        # If tests fail, the step will fail, and thus the job and workflow run will be marked as failed.
+        # This achieves 'action wrong' but doesn't block commits/merges by default.
+        # Branch protection rules in GitHub would be needed to block merges on failed checks. 
