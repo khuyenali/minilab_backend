@@ -2,11 +2,9 @@ name: Go Test CI
 
 on:
   push:
-    branches:
-      - ci-test
+    # branches: # Commented out or removed to apply to all branches
   pull_request:
-    branches:
-      - ci-test
+    # branches: # Commented out or removed to apply to all branches
 
 jobs:
   test:
