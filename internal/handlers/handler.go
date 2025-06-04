@@ -6,12 +6,13 @@ import (
 
 // Handler holds all the dependencies for handlers
 type Handler struct {
-	userService       service.UserService
-	roleService       service.RoleService
-	taskTypeService   service.TaskTypeService
-	machineService    service.MachineService
-	taskService       service.TaskService
-	assignmentService service.AssignmentService
+	userService             service.UserService
+	roleService             service.RoleService
+	taskTypeService         service.TaskTypeService
+	machineService          service.MachineService
+	taskService             service.TaskService
+	assignmentService       service.AssignmentService
+	assignmentStatusService service.AssignmentStatusService
 }
 
 // NewHandler creates a new handler instance
@@ -22,14 +23,16 @@ func NewHandler(
 	machineService service.MachineService,
 	taskService service.TaskService,
 	assignmentService service.AssignmentService,
+	assignmentStatusService service.AssignmentStatusService,
 ) *Handler {
 	return &Handler{
-		userService:       userService,
-		roleService:       roleService,
-		taskTypeService:   taskTypeService,
-		machineService:    machineService,
-		taskService:       taskService,
-		assignmentService: assignmentService,
+		userService:             userService,
+		roleService:             roleService,
+		taskTypeService:         taskTypeService,
+		machineService:          machineService,
+		taskService:             taskService,
+		assignmentService:       assignmentService,
+		assignmentStatusService: assignmentStatusService,
 	}
 }
 

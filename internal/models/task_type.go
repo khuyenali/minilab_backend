@@ -13,13 +13,14 @@ type UserBasic struct {
 
 // TaskType represents a task type in the system (domain model)
 type TaskType struct {
-	ID          int32            `json:"id" example:"1"`
-	TypeName    string           `json:"name" example:"3D Printing"`
-	Description *string          `json:"description" example:"3D printing services"`
-	Machines    []*MachineBasic  `json:"machines"`
-	Users       []*UserBasic     `json:"users"`
-	CreatedAt   time.Time        `json:"created_at" example:"2023-01-01T00:00:00Z"`
-	UpdatedAt   time.Time        `json:"updated_at" example:"2023-01-01T00:00:00Z"`
+	ID                 int32            `json:"id" example:"1"`
+	TypeName           string           `json:"name" example:"3D Printing"`
+	Description        *string          `json:"description" example:"3D printing services"`
+	Machines           []*MachineBasic  `json:"machines"`
+	Users              []*UserBasic     `json:"users"`
+	AvailableResources int32            `json:"available_resources" example:"2"`
+	CreatedAt          time.Time        `json:"created_at" example:"2023-01-01T00:00:00Z"`
+	UpdatedAt          time.Time        `json:"updated_at" example:"2023-01-01T00:00:00Z"`
 }
 
 // TaskTypeBasic represents a task type without machines (for user contexts)

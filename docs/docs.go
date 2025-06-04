@@ -545,7 +545,7 @@ const docTemplate = `{
         },
         "/api/v1/task_type": {
             "get": {
-                "description": "Get a list of all task types",
+                "description": "Get a list of all task types with available resources",
                 "produces": [
                     "application/json"
                 ],
@@ -555,7 +555,7 @@ const docTemplate = `{
                 "summary": "Get all task types",
                 "responses": {
                     "200": {
-                        "description": "List of task types",
+                        "description": "List of task types with available resources",
                         "schema": {
                             "allOf": [
                                 {
@@ -2067,6 +2067,10 @@ const docTemplate = `{
         "models.TaskType": {
             "type": "object",
             "properties": {
+                "available_resources": {
+                    "type": "integer",
+                    "example": 2
+                },
                 "created_at": {
                     "type": "string",
                     "example": "2023-01-01T00:00:00Z"

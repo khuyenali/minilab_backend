@@ -89,10 +89,11 @@ func main() {
 	// Initialize service layer
 	userService := service.NewUserService(userRepo, userToTypeRepo, taskTypeRepo)
 	roleService := service.NewRoleService(roleRepo)
-	taskTypeService := service.NewTaskTypeService(taskTypeRepo, userRepo)
 	machineService := service.NewMachineService(machineRepo, taskTypeRepo)
+	taskTypeService := service.NewTaskTypeService(taskTypeRepo, userRepo, db)
 	taskService := service.NewTaskService(taskRepo, taskTypeRepo, userRepo, db)
 	assignmentService := service.NewAssignmentService(db, taskRepo)
+	assignmentStatusService := service.NewAssignmentStatusService(db, taskRepo)
 
 	// Set Gin mode
 	if cfg.Environment == "production" {
@@ -113,7 +114,7 @@ func main() {
 	r.Use(corsMiddleware())
 
 	// Initialize handlers with dependencies
-	h := handlers.NewHandler(userService, roleService, taskTypeService, machineService, taskService, assignmentService)
+	h := handlers.NewHandler(userService, roleService, taskTypeService, machineService, taskService, assignmentService, assignmentStatusService)
 
 	// Swagger documentation endpoint
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

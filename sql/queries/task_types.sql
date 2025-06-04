@@ -32,4 +32,14 @@ WHERE t.id = $1 LIMIT 1;
 SELECT m.id, m.machine_name, m.quantity, m.estimate_time, m.type_id, m.created_at, m.updated_at 
 FROM machines m 
 WHERE m.type_id = $1 
-ORDER BY m.id; 
+ORDER BY m.id;
+
+-- name: GetMachineUsageByTaskType :many
+SELECT 
+    st.type_id,
+    COUNT(uts.id) as usage_count
+FROM sub_tasks st
+JOIN user_to_sub_task uts ON st.id = uts.sub_task_id
+JOIN tasks t ON st.task_id = t.id
+WHERE t.status IN ('pending', 'processing')
+GROUP BY st.type_id; 

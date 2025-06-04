@@ -11,14 +11,14 @@ import (
 
 // GetTaskTypes handles GET /task_type
 // @Summary Get all task types
-// @Description Get a list of all task types
+// @Description Get a list of all task types with available resources
 // @Tags task-types
 // @Produce json
-// @Success 200 {object} ApiResponse{data=[]models.TaskType} "List of task types"
+// @Success 200 {object} ApiResponse{data=[]models.TaskType} "List of task types with available resources"
 // @Failure 500 {object} ApiResponse "Internal server error"
 // @Router /api/v1/task_type [get]
 func (h *Handler) GetTaskTypes(c *gin.Context) {
-	taskTypes, err := h.taskTypeService.GetTaskTypes(c.Request.Context())
+	taskTypes, err := h.taskTypeService.GetTaskTypesWithAvailableResources(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to retrieve task types",

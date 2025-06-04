@@ -44,6 +44,45 @@ func (q *Queries) DeleteTaskType(ctx context.Context, id int32) error {
 	return err
 }
 
+const getMachineUsageByTaskType = `-- name: GetMachineUsageByTaskType :many
+SELECT 
+    st.type_id,
+    COUNT(uts.id) as usage_count
+FROM sub_tasks st
+JOIN user_to_sub_task uts ON st.id = uts.sub_task_id
+JOIN tasks t ON st.task_id = t.id
+WHERE t.status IN ('pending', 'processing')
+GROUP BY st.type_id
+`
+
+type GetMachineUsageByTaskTypeRow struct {
+	TypeID     int32
+	UsageCount int64
+}
+
+func (q *Queries) GetMachineUsageByTaskType(ctx context.Context) ([]GetMachineUsageByTaskTypeRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMachineUsageByTaskType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMachineUsageByTaskTypeRow
+	for rows.Next() {
+		var i GetMachineUsageByTaskTypeRow
+		if err := rows.Scan(&i.TypeID, &i.UsageCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMachinesByTaskType = `-- name: GetMachinesByTaskType :many
 SELECT m.id, m.machine_name, m.quantity, m.estimate_time, m.type_id, m.created_at, m.updated_at 
 FROM machines m 
